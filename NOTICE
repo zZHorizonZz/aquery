@@ -1,0 +1,8 @@
+aquery
+Copyright 2026 the aquery authors
+
+This product includes software developed as part of LUCI
+(https://chromium.googlesource.com/infra/luci/luci-go), Copyright 2022 The
+LUCI Authors, licensed under the Apache License, Version 2.0. The design of
+the AIP-160 filter parser and generator and the AIP-132 order by parser and
+generator follows the analysis/internal/aip package of that project.
