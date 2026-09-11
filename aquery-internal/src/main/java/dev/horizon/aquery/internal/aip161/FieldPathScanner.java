@@ -1,17 +1,16 @@
-package dev.horizon.aquery.internal.aip132;
+package dev.horizon.aquery.internal.aip161;
 
 import dev.horizon.aquery.aip132.FieldPath;
-import dev.horizon.aquery.aip132.InvalidOrderByException;
 import dev.horizon.aquery.common.Identifiers;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Reads the AIP-132 order_by grammar in small parts: spaces, field path segments, words and separators.
+ * Reads AIP-161 field paths in small parts: spaces, segments, words and separators.
  *
  * <p>
- * The order_by parser and the field path parser both use this scanner. Thus the grammar is in one location. The
- * scanner reads the grammar that LUCI parses:
+ * The order_by parser and the read mask parser both use this scanner. Thus the field path grammar is in one
+ * location. The scanner reads the grammar that LUCI parses:
  *
  * <pre>
  * field_path = segment {"." segment}
@@ -21,15 +20,18 @@ import java.util.List;
  * spaces = " " { " " }
  * </pre>
  *
+ * <p>
+ * The scanner does not support the {@code *} wildcard of AIP-161 in a segment.
+ *
  * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip132/orderby_parser.go">LUCI aip132:
  *      orderby_parser.go (orderByLexer)</a>
  */
-final class OrderByScanner {
+public final class FieldPathScanner {
 
   private final String text;
   private int position;
 
-  OrderByScanner(String text) {
+  public FieldPathScanner(String text) {
     this.text = text;
   }
 
@@ -38,7 +40,7 @@ final class OrderByScanner {
    *
    * @return the offset of the next character in the text
    */
-  int position() {
+  public int position() {
     return position;
   }
 
@@ -47,7 +49,7 @@ final class OrderByScanner {
    *
    * @return true if no character is left
    */
-  boolean atEnd() {
+  public boolean atEnd() {
     return position >= text.length();
   }
 
@@ -56,7 +58,7 @@ final class OrderByScanner {
    *
    * @return true if there was a space
    */
-  boolean skipSpaces() {
+  public boolean skipSpaces() {
     int start = position;
     while (!atEnd() && text.charAt(position) == ' ') {
       position++;
@@ -70,7 +72,7 @@ final class OrderByScanner {
    * @param character the expected character
    * @return true if the next character was the expected character
    */
-  boolean accept(char character) {
+  public boolean accept(char character) {
     if (!atEnd() && text.charAt(position) == character) {
       position++;
       return true;
@@ -82,9 +84,9 @@ final class OrderByScanner {
    * Reads a field path: segments with a dot between them.
    *
    * @return the field path
-   * @throws InvalidOrderByException if a segment is missing, or if a backtick is open
+   * @throws FieldPathSyntaxException if a segment is missing, if a segment is a wildcard, or if a backtick is open
    */
-  FieldPath fieldPath() {
+  public FieldPath fieldPath() {
     List<String> segments = new ArrayList<>();
     segments.add(segment());
     while (accept('.')) {
@@ -98,7 +100,7 @@ final class OrderByScanner {
    *
    * @return the word, or null if no word starts at this position
    */
-  String word() {
+  public String word() {
     if (atEnd() || !Identifiers.isStart(text.charAt(position))) {
       return null;
     }
@@ -113,9 +115,14 @@ final class OrderByScanner {
     if (accept('`')) {
       return quotedSegment(position - 1);
     }
+    if (!atEnd() && text.charAt(position) == '*') {
+      throw new FieldPathSyntaxException(position,
+          "syntax error: the wildcard '*' is not supported in a field path, at position %d of '%s'".formatted(position, text));
+    }
     String word = word();
     if (word == null) {
-      throw new InvalidOrderByException(position, "syntax error: expected a field name at position %d of '%s'", position, text);
+      throw new FieldPathSyntaxException(position,
+          "syntax error: expected a field name at position %d of '%s'".formatted(position, text));
     }
     return word;
   }
@@ -130,6 +137,7 @@ final class OrderByScanner {
       }
       segment.append(character);
     }
-    throw new InvalidOrderByException(start, "syntax error: unterminated backtick at position %d of '%s'", start, text);
+    throw new FieldPathSyntaxException(start,
+        "syntax error: unterminated backtick at position %d of '%s'".formatted(start, text));
   }
 }

@@ -15,11 +15,12 @@ package dev.horizon.aquery;
  * <li>{@link dev.horizon.aquery.aip160.InvalidFilterException} for filter text.
  * <li>{@link dev.horizon.aquery.aip132.InvalidOrderByException} for order_by text.
  * <li>{@link dev.horizon.aquery.aip158.InvalidPageTokenException} for a page token.
+ * <li>{@link dev.horizon.aquery.aip157.InvalidReadMaskException} for a read mask.
  * </ul>
  *
  * <p>
  * Each subtype gets the message as a template and the values for the template. Catch this type if the API
- * answers the three errors in the same way.
+ * answers all these errors in the same way.
  *
  * <p>
  * The message is plain text. It tells what the client wrote and what the library expected. If a parser stops at
@@ -30,6 +31,7 @@ public class InvalidQueryException extends RuntimeException {
   public static final String FILTER = "filter";
   public static final String ORDER_BY = "order_by";
   public static final String PAGE_TOKEN = "page_token";
+  public static final String READ_MASK = "read_mask";
 
   private final String field;
   private final int position;

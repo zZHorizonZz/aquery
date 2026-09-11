@@ -4,7 +4,8 @@ import dev.horizon.aquery.aip132.FieldPath;
 import java.util.Objects;
 
 /**
- * The schema of a field. A filter can refer to the field, and an order_by clause can sort by it.
+ * The schema of a field. A filter can refer to the field, an order_by clause can sort by it, and a read mask can
+ * select it.
  *
  * <p>
  * A field is not always a column of the table. The field {@code username} can be the column {@code username}.
@@ -18,11 +19,12 @@ import java.util.Objects;
  * <li>{@code filterable}: the field can be in a filter restriction, as in {@code username = "dan"}.
  * <li>{@code filterableImplicitly}: a bare value in a filter, as in {@code prod}, matches this field.
  * <li>{@code sortable}: an order_by clause can sort by this field.
+ * <li>{@code readable}: a read mask can select this field, as AIP-157 specifies.
  * </ul>
  *
  * <p>
- * A field that you can filter implicitly is also filterable. A client cannot name a field that is not filterable
- * and not sortable.
+ * A field that you can filter implicitly is also filterable. A client cannot name a field without one of these
+ * declarations. Thus a column that the API must not show, for example a password hash, stays hidden.
  *
  * <p>
  * The field compares these declarations with its backend when the server makes the schema. If the backend
@@ -34,7 +36,8 @@ import java.util.Objects;
  *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/datamodel.go">LUCI
  *      aip160: datamodel.go (Field)</a>
  */
-public record Field(FieldPath fieldPath, boolean sortable, boolean filterable, boolean implicitFilter, FieldBackend backend) {
+public record Field(FieldPath fieldPath, boolean sortable, boolean filterable, boolean implicitFilter, boolean readable,
+    FieldBackend backend) {
 
   public Field {
     Objects.requireNonNull(fieldPath, "fieldPath");
@@ -54,6 +57,10 @@ public record Field(FieldPath fieldPath, boolean sortable, boolean filterable, b
       throw new IllegalArgumentException(
           "field " + fieldPath + " is sortable, but its " + backend.typeName() + " backend does not support sorting");
     }
+    if (readable && !backend.supportsReading()) {
+      throw new IllegalArgumentException(
+          "field " + fieldPath + " is readable, but its " + backend.typeName() + " backend does not support reading");
+    }
   }
 
   /**
@@ -70,6 +77,7 @@ public record Field(FieldPath fieldPath, boolean sortable, boolean filterable, b
     private boolean sortable;
     private boolean filterable;
     private boolean implicitFilter;
+    private boolean readable;
     private FieldBackend backend;
 
     public Builder(String... segments) {
@@ -119,6 +127,16 @@ public record Field(FieldPath fieldPath, boolean sortable, boolean filterable, b
     }
 
     /**
+     * Lets a read mask select the field.
+     *
+     * @return this builder
+     */
+    public Builder readable() {
+      this.readable = true;
+      return this;
+    }
+
+    /**
      * Makes the field.
      *
      * @return the field
@@ -129,7 +147,7 @@ public record Field(FieldPath fieldPath, boolean sortable, boolean filterable, b
       if (backend == null) {
         throw new IllegalStateException("field " + fieldPath + " needs a backend");
       }
-      return new Field(fieldPath, sortable, filterable, implicitFilter, backend);
+      return new Field(fieldPath, sortable, filterable, implicitFilter, readable, backend);
     }
   }
 }

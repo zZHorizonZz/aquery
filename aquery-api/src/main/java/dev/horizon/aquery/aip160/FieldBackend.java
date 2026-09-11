@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 /**
- * Writes the SQL that filters and sorts one logical field. The backend knows how the database keeps the field.
+ * Writes the SQL that filters, sorts and reads one logical field. The backend knows how the database keeps the field.
  *
  * <p>
  * The database keeps many fields in the same form that the API shows. For example, a STRING field is in a STRING
@@ -32,6 +32,7 @@ import java.util.stream.Stream;
  * <li>{@link #supportsImplicitRestrictions()} tells if a bare value can match the field.
  * <li>{@link #supportsSorting()} tells if an order_by clause can sort by the field. Some fields have a storage
  * order that is different from their logical order. These fields do not support sorting.
+ * <li>{@link #supportsReading()} tells if a read mask can select the field.
  * </ul>
  *
  * <p>
@@ -146,6 +147,30 @@ public interface FieldBackend {
    */
   default List<SortKey> sortKeys(boolean descending, ColumnReferences columns) {
     throw new UnsupportedOperationException(typeName() + " fields cannot be sorted by");
+  }
+
+  /**
+   * Tells if a read mask can select this field.
+   *
+   * @return true if the field supports reading
+   */
+  default boolean supportsReading() {
+    return false;
+  }
+
+  /**
+   * Gives the SQL expressions that read this field, for the select list of a statement.
+   *
+   * <p>
+   * Most fields read one column. A field that comes from several columns gives one expression for each column.
+   * The server reads the values of the expressions in this sequence. The generator calls this method only on a
+   * backend that {@link #supportsReading() supports reading}.
+   *
+   * @param columns the names of the table columns
+   * @return the SQL expressions, in the sequence that the server reads them
+   */
+  default List<String> selectExpressions(ColumnReferences columns) {
+    throw new UnsupportedOperationException(typeName() + " fields cannot be read");
   }
 
   /**

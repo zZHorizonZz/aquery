@@ -63,6 +63,16 @@ public class SimpleColumn implements FieldBackend {
     return List.of(new SortKey(column(columns), descending));
   }
 
+  @Override
+  public boolean supportsReading() {
+    return true;
+  }
+
+  @Override
+  public List<String> selectExpressions(ColumnReferences columns) {
+    return List.of(column(columns));
+  }
+
   /**
    * Gives the reference to this column. It includes the table alias if the statement has one.
    *
