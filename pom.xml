@@ -19,6 +19,26 @@
     </license>
   </licenses>
 
+  <scm>
+    <connection>scm:git:https://github.com/zZHorizonZz/aquery.git</connection>
+    <developerConnection>scm:git:git@github.com:zZHorizonZz/aquery.git</developerConnection>
+    <url>https://github.com/zZHorizonZz/aquery</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub Packages</name>
+      <url>https://maven.pkg.github.com/zZHorizonZz/aquery</url>
+    </repository>
+    <snapshotRepository>
+      <id>github</id>
+      <name>GitHub Packages</name>
+      <url>https://maven.pkg.github.com/zZHorizonZz/aquery</url>
+    </snapshotRepository>
+  </distributionManagement>
+
   <modules>
     <module>aquery-api</module>
     <module>aquery-internal</module>
