@@ -7,8 +7,8 @@ import dev.horizon.aquery.aip160.FilterParser;
  * The parser the internal module provides to the api: the lexer and the recursive descent.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI
- *      aip160: filter_parser.go (ParseFilter)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI
+ * aip160: filter_parser.go (ParseFilter)</a>
  */
 public final class InternalFilterParser implements FilterParser {
 

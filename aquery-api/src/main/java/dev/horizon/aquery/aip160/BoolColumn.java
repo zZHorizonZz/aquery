@@ -14,8 +14,8 @@ import java.util.Set;
  * The SQL contains the literal {@code TRUE} or {@code FALSE}. A boolean binds no parameter.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/bool_column.go">LUCI
- *      aip160: bool_column.go (BoolColumn)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/bool_column.go">LUCI
+ * aip160: bool_column.go (BoolColumn)</a>
  */
 public class BoolColumn extends SimpleColumn {
 

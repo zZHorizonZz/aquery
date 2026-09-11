@@ -51,13 +51,13 @@ class ColumnsTest {
 
   @ParameterizedTest(name = "[{0}]")
   @CsvSource(delimiter = '|', textBlock = """
-      foo:"somevalue"    | (T.db_foo LIKE @p_0)
-      foo = "somevalue"  | (T.db_foo = @p_0)
+      foo:"somevalue" | (T.db_foo LIKE @p_0)
+      foo = "somevalue" | (T.db_foo = @p_0)
       foo != "somevalue" | (T.db_foo <> @p_0)
-      foo < "m"          | (T.db_foo < @p_0)
-      foo >= "m"         | (T.db_foo >= @p_0)
-      foo = "*.com"      | (T.db_foo LIKE @p_0)
-      foo != "prod*"     | (T.db_foo NOT LIKE @p_0)
+      foo < "m" | (T.db_foo < @p_0)
+      foo >= "m" | (T.db_foo >= @p_0)
+      foo = "*.com" | (T.db_foo LIKE @p_0)
+      foo != "prod*" | (T.db_foo NOT LIKE @p_0)
       """)
   void stringColumns(String filter, String expectedSql) {
     assertThat(sql(strings, filter)).isEqualTo(expectedSql);
@@ -65,12 +65,12 @@ class ColumnsTest {
 
   @ParameterizedTest(name = "[{0}] binds [{1}]")
   @CsvSource(delimiter = '|', textBlock = """
-      foo = "*.com"      | %.com
-      foo = "prod*"      | prod%
-      foo = "*prod*"     | %prod%
-      foo = "*"          | %
-      foo = "a*b"        | a*b
-      foo = "*50%_off"   | %50\\%\\_off
+      foo = "*.com" | %.com
+      foo = "prod*" | prod%
+      foo = "*prod*" | %prod%
+      foo = "*" | %
+      foo = "a*b" | a*b
+      foo = "*50%_off" | %50\\%\\_off
       """)
   void stringWildcards(String filter, String expectedParameter) {
     assertThat(parameters(strings, filter)).containsExactly(new WhereClause.QueryParameter("p_0", expectedParameter));
@@ -155,8 +155,8 @@ class ColumnsTest {
 
   @ParameterizedTest(name = "[{0}]")
   @CsvSource({
-      "'foo.baz=blah',  fields are only supported for key-value columns",
-      "'foo=blah.baz',   did you mean to wrap the value in quotes?"
+      "'foo.baz=blah', fields are only supported for key-value columns",
+      "'foo=blah.baz', did you mean to wrap the value in quotes?"
   })
   void nestedFieldsOnlyOnKeyValueColumns(String filter, String expectedMessage) {
     assertThatThrownBy(() -> sql(keyValues, filter))
@@ -166,19 +166,19 @@ class ColumnsTest {
 
   @ParameterizedTest(name = "[{0}]")
   @CsvSource({
-      "'flag = true',      (T.db_flag = TRUE)",
-      "'flag != false',    (T.db_flag <> FALSE)",
-      "'count = 3',        (T.db_count = 3)",
-      "'count > 3',        (T.db_count > 3)",
-      "'count <= 3',       (T.db_count <= 3)",
-      "'count != 3',       (T.db_count <> 3)",
-      "'count > -30',      (T.db_count > -30)",
-      "'age = 1.5s',       (T.db_age = 1500000000)",
-      "'age < 1s',         (T.db_age < 1000000000)",
-      "'age != 1s',        (T.db_age <> 1000000000)",
-      "'status = ACTIVE',  (T.db_status = 1)",
+      "'flag = true', (T.db_flag = TRUE)",
+      "'flag != false', (T.db_flag <> FALSE)",
+      "'count = 3', (T.db_count = 3)",
+      "'count > 3', (T.db_count > 3)",
+      "'count <= 3', (T.db_count <= 3)",
+      "'count != 3', (T.db_count <> 3)",
+      "'count > -30', (T.db_count > -30)",
+      "'age = 1.5s', (T.db_age = 1500000000)",
+      "'age < 1s', (T.db_age < 1000000000)",
+      "'age != 1s', (T.db_age <> 1000000000)",
+      "'status = ACTIVE', (T.db_status = 1)",
       "'status != INACTIVE', (T.db_status <> 2)",
-      "'hashed = \"x\"',   (T.db_hashed = @p_0)",
+      "'hashed = \"x\"', (T.db_hashed = @p_0)",
       "'create_time > \"2012-04-21T11:30:00-04:00\"', (T.db_create_time > 1335022200000000)",
       "'create_time = \"2012-04-21T15:30:00Z\"', (T.db_create_time = 1335022200000000)",
       "'create_time != \"2012-04-21T15:30:00Z\"', (T.db_create_time <> 1335022200000000)"
@@ -210,7 +210,7 @@ class ColumnsTest {
       tags : "prod" | (EXISTS (SELECT value FROM UNNEST(T.db_tags) as value WHERE value LIKE @p_0))
       tags = "prod" | (EXISTS (SELECT value FROM UNNEST(T.db_tags) as value WHERE value = @p_0))
       tags = "pro*" | (EXISTS (SELECT value FROM UNNEST(T.db_tags) as value WHERE value LIKE @p_0))
-      tags : *      | (ARRAY_LENGTH(T.db_tags) > 0)
+      tags : * | (ARRAY_LENGTH(T.db_tags) > 0)
       """)
   void repeatedStringColumns(String filter, String expectedSql) {
     assertThat(sql(scalars, filter)).isEqualTo(expectedSql);

@@ -24,8 +24,8 @@ import java.util.Set;
  * An order_by clause cannot sort by the field. A bare value in the filter cannot match the field.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/repeated_string_column.go">LUCI
- *      aip160: repeated_string_column.go (RepeatedStringColumn)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/repeated_string_column.go">LUCI
+ * aip160: repeated_string_column.go (RepeatedStringColumn)</a>
  */
 public class RepeatedStringColumn extends SimpleColumn {
 

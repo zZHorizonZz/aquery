@@ -26,8 +26,8 @@ import java.util.Set;
  * string field.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/string_column.go">LUCI
- *      aip160: string_column.go (StringColumn)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/string_column.go">LUCI
+ * aip160: string_column.go (StringColumn)</a>
  */
 public class StringColumn extends SimpleColumn {
 

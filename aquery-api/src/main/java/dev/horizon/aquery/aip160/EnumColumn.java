@@ -16,8 +16,8 @@ import java.util.Set;
  * comparisons.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/enum_column.go">LUCI
- *      aip160: enum_column.go (EnumColumn)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/enum_column.go">LUCI
+ * aip160: enum_column.go (EnumColumn)</a>
  */
 public class EnumColumn extends Int64Column {
 

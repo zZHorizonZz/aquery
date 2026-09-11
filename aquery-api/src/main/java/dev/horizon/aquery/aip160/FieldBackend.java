@@ -47,8 +47,8 @@ import java.util.stream.Stream;
  * that does not obey this rule makes the full library unsafe against SQL injection.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/field_backends.go">LUCI
- *      aip160: field_backends.go (FieldBackend)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/field_backends.go">LUCI
+ * aip160: field_backends.go (FieldBackend)</a>
  */
 public interface FieldBackend {
 
@@ -91,7 +91,7 @@ public interface FieldBackend {
    * @param generator the generator that binds values and names columns
    * @return the SQL expression in parentheses
    * @throws InvalidFilterException if the backend cannot answer the restriction, for example because the argument has the wrong
-   *         type
+   * type
    */
   String restrictionQuery(RestrictionContext restriction, Generator generator);
 

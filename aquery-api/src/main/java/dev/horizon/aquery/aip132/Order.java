@@ -35,7 +35,7 @@ import java.util.List;
  * The parser comes from the module path or the class path at runtime. The internal module supplies it.
  *
  * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip132/orderby_parser.go">LUCI aip132:
- *      orderby_parser.go (ParseOrderBy)</a>
+ * orderby_parser.go (ParseOrderBy)</a>
  */
 public final class Order {
 
@@ -50,7 +50,7 @@ public final class Order {
    * @param orderBy the order_by text from the client. It can be null
    * @return the terms of the order, in the sequence of the text. The list cannot change
    * @throws InvalidOrderByException if the syntax is wrong, if a direction is not {@code asc} or {@code desc}, or if a field
-   *         occurs two times
+   * occurs two times
    */
   public static List<OrderBy> parse(String orderBy) {
     return PARSER.get().parse(orderBy);

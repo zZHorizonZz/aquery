@@ -16,7 +16,7 @@ import java.util.Set;
  * {@link FieldPathScanner}.
  *
  * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip132/orderby_parser.go">LUCI aip132:
- *      orderby_parser.go (ParseOrderBy)</a>
+ * orderby_parser.go (ParseOrderBy)</a>
  */
 public final class InternalOrderByParser implements OrderByParser {
 

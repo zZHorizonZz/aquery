@@ -11,7 +11,7 @@ import dev.horizon.aquery.aip132.FieldPath;
  * error. The message names the operator, the field and the field type. Thus the client knows what failed.
  *
  * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/field_backends.go">LUCI aip160:
- *      field_backends.go (OperatorNotImplementedError)</a>
+ * field_backends.go (OperatorNotImplementedError)</a>
  */
 public final class OperatorNotImplementedException extends InvalidFilterException {
 

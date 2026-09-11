@@ -54,8 +54,8 @@ import java.util.stream.Stream;
  * the client wrote.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI
- *      aip160: filter_parser.go (Filter AST)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI
+ * aip160: filter_parser.go (Filter AST)</a>
  */
 public final class Filter {
 

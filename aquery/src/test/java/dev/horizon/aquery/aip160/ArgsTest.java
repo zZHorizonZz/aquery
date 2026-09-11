@@ -37,7 +37,7 @@ class ArgsTest {
   }
 
   @ParameterizedTest(name = "[{0}]")
-  @CsvSource({ "'foo = true',  true", "'foo = false', false" })
+  @CsvSource({ "'foo = true', true", "'foo = false', false" })
   void readsBooleans(String filter, boolean expected) {
     assertThat(Args.coerceToBoolConstant(argOf(filter))).isEqualTo(expected);
   }
@@ -83,7 +83,7 @@ class ArgsTest {
   }
 
   @ParameterizedTest(name = "[{0}]")
-  @CsvSource({ "'foo = 123', 123", "'foo = 0',   0", "'foo = -30', -30" })
+  @CsvSource({ "'foo = 123', 123", "'foo = 0', 0", "'foo = -30', -30" })
   void readsIntegers(String filter, long expected) {
     assertThat(Args.coerceToIntegerConstant(argOf(filter))).isEqualTo(expected);
   }
@@ -104,7 +104,7 @@ class ArgsTest {
   }
 
   @ParameterizedTest(name = "[{0}]")
-  @CsvSource({ "'foo = \"bar\"', bar", "'foo = \"\"',    ''" })
+  @CsvSource({ "'foo = \"bar\"', bar", "'foo = \"\"', ''" })
   void readsStrings(String filter, String expected) {
     assertThat(Args.coerceToStringConstant(argOf(filter))).isEqualTo(expected);
   }
@@ -120,9 +120,9 @@ class ArgsTest {
   @ParameterizedTest(name = "[{0}]")
   @CsvSource({
       "'foo = \"2012-04-21T11:30:00-04:00\"', 2012-04-21T15:30Z",
-      "'foo = \"2012-04-21T11:30:00Z\"',       2012-04-21T11:30Z",
-      "'foo = \"2012-04-21t11:30:00z\"',       2012-04-21T11:30Z",
-      "'foo = \"2012-04-21T11:30:00.500Z\"',   2012-04-21T11:30:00.500Z" })
+      "'foo = \"2012-04-21T11:30:00Z\"', 2012-04-21T11:30Z",
+      "'foo = \"2012-04-21t11:30:00z\"', 2012-04-21T11:30Z",
+      "'foo = \"2012-04-21T11:30:00.500Z\"', 2012-04-21T11:30:00.500Z" })
   void readsTimestamps(String filter, OffsetDateTime expected) {
     assertThat(Args.coerceToTimestampConstant(argOf(filter))).isEqualTo(expected);
   }

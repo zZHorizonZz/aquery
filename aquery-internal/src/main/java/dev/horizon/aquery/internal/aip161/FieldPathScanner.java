@@ -24,7 +24,7 @@ import java.util.List;
  * The scanner does not support the {@code *} wildcard of AIP-161 in a segment.
  *
  * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip132/orderby_parser.go">LUCI aip132:
- *      orderby_parser.go (orderByLexer)</a>
+ * orderby_parser.go (orderByLexer)</a>
  */
 public final class FieldPathScanner {
 

@@ -70,13 +70,13 @@ class OrderByTest {
 
   @ParameterizedTest(name = "[{0}] fails at {1}")
   @CsvSource(delimiter = '|', quoteCharacter = '\'', textBlock = """
-      `something   | 0
-      foo,         | 4
-      a-b          | 1
+      `something | 0
+      foo, | 4
+      a-b | 1
       foo desc asc | 9
-      foo up       | 4
-      foo.         | 4
-      1foo         | 0
+      foo up | 4
+      foo. | 4
+      1foo | 0
       """)
   @DisplayName("invalid input is rejected where it goes wrong")
   void invalidInput(String orderBy, int position) {

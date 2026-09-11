@@ -12,8 +12,8 @@ package dev.horizon.aquery.aip160;
  * — is a provider of this interface, not an edit to the api.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI
- *      aip160: filter_parser.go (ParseFilter)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI
+ * aip160: filter_parser.go (ParseFilter)</a>
  */
 public interface FilterParser {
 

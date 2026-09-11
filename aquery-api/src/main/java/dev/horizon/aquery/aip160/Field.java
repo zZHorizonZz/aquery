@@ -33,8 +33,8 @@ import java.util.Objects;
  * request.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/datamodel.go">LUCI
- *      aip160: datamodel.go (Field)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/datamodel.go">LUCI
+ * aip160: datamodel.go (Field)</a>
  */
 public record Field(FieldPath fieldPath, boolean sortable, boolean filterable, boolean implicitFilter, boolean readable,
     FieldBackend backend) {

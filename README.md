@@ -33,7 +33,7 @@ SelectClause.Result select = SelectClause.of(users, ReadMask.parse("username"), 
 Continue a list with a page token:
 
 ```java
-PageTokenCodec tokens = new PageTokenCodec(secretKey);   // 16, 24 or 32 bytes
+PageTokenCodec tokens = new PageTokenCodec(secretKey); // 16, 24 or 32 bytes
 String fingerprint = PageToken.fingerprintOf(filter, order);
 
 Optional<PageToken> token = tokens.decode(request.pageToken(), fingerprint);
@@ -55,7 +55,7 @@ from the schema. Thus the output is safe against SQL injection.
 
 ## Requirements
 
-Java 25 or later. No dependencies.
+Java 25 or later.
 
 ## License
 

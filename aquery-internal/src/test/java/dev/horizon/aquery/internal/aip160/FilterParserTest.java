@@ -20,17 +20,17 @@ class FilterParserTest {
 
   @ParameterizedTest(name = "[{0}] lexes as {1}({2})")
   @CsvSource(delimiter = '|', textBlock = """
-      <= 10     | COMPARATOR | <=
-      -file     | NEGATE     | -
-      NOT file  | NEGATE     | NOT
-      AND b     | AND        | AND
-      OR a      | OR         | OR
-      .field    | DOT        | .
-      (arg)     | LPAREN     | (
-      )         | RPAREN     | )
-      , arg2)   | COMMA      | ,
-      text      | TEXT       | text
-      "string"  | STRING     | "string"
+      <= 10 | COMPARATOR | <=
+      -file | NEGATE | -
+      NOT file | NEGATE | NOT
+      AND b | AND | AND
+      OR a | OR | OR
+      .field | DOT | .
+      (arg) | LPAREN | (
+      ) | RPAREN | )
+      , arg2) | COMMA | ,
+      text | TEXT | text
+      "string" | STRING | "string"
       """)
   void tokenKinds(String input, Kind kind, String value) {
     Lexer.Token token = new Lexer(input).next();
@@ -264,11 +264,11 @@ class FilterParserTest {
 
   @ParameterizedTest(name = "[{0}] fails at {1}")
   @CsvSource(delimiter = '|', textBlock = """
-      a = "b" !x       | 8
-      (a OR b          | 7
+      a = "b" !x | 8
+      (a OR b | 7
       a = "unterminated | 4
-      a = "\\q"        | 5
-      value =          | 7
+      a = "\\q" | 5
+      value = | 7
       """)
   @DisplayName("says where in the text the reading stopped")
   void errorPositions(String input, int position) {
@@ -279,12 +279,12 @@ class FilterParserTest {
 
   @ParameterizedTest(name = "[{0}] reads as [{1}]")
   @CsvSource(delimiter = '|', quoteCharacter = '\'', textBlock = """
-      "plain"            | plain
-      "a\\"b"            | a"b
-      "back\\\\slash"    | back\\slash
-      "caf\\u00e9"       | café
-      "\\x41\\101"       | AA
-      "\\U0001F600"      | 😀
+      "plain" | plain
+      "a\\"b" | a"b
+      "back\\\\slash" | back\\slash
+      "caf\\u00e9" | café
+      "\\x41\\101" | AA
+      "\\U0001F600" | 😀
       """)
   @DisplayName("reads the escapes of Go string literals, as LUCI does")
   void escapes(String input, String expected) {

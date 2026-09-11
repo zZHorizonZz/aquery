@@ -34,8 +34,8 @@ import java.util.regex.Pattern;
  * SQL in the form that the database expects.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/arg_parsers.go">LUCI
- *      aip160: arg_parsers.go (Coerce* constants, EnumDefinition)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/arg_parsers.go">LUCI
+ * aip160: arg_parsers.go (Coerce* constants, EnumDefinition)</a>
  */
 public final class Args {
 

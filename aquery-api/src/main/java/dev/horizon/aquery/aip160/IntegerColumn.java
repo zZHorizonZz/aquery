@@ -15,8 +15,8 @@ import java.util.Set;
  * no parameter.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/int_column.go">LUCI
- *      aip160: int_column.go (IntegerColumn)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/int_column.go">LUCI
+ * aip160: int_column.go (IntegerColumn)</a>
  */
 public class IntegerColumn extends Int64Column {
 

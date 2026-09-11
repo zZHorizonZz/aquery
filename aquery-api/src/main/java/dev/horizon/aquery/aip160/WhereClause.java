@@ -46,8 +46,8 @@ import java.util.List;
  * must be SQL identifiers, as {@link SqlGenerator} specifies.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_generator.go">LUCI
- *      aip160: filter_generator.go (WhereClause)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_generator.go">LUCI
+ * aip160: filter_generator.go (WhereClause)</a>
  */
 public final class WhereClause {
 
@@ -85,13 +85,13 @@ public final class WhereClause {
    * @param table the schema of the table for the filter
    * @param filter the parsed filter. It can be null or empty
    * @param tableAlias the alias of the table in the statement, for example in a JOIN. Use null or an empty string if the table
-   *        has no alias
+   * has no alias
    * @param parameterPrefix the prefix of the parameter names. The prefix keeps the names different from the other parameters of
-   *        the statement
+   * the statement
    * @return the boolean SQL expression in parentheses and its parameters
    * @throws InvalidFilterException if the filter does not compile for this schema
    * @throws IllegalArgumentException if the table alias starts with {@code _}, or if the alias or the prefix is not an SQL
-   *         identifier
+   * identifier
    */
   public static Result of(DatabaseTable table, Filter filter, String tableAlias, String parameterPrefix) {
     SqlGenerator generator = new SqlGenerator(tableAlias, parameterPrefix);

@@ -32,8 +32,8 @@ import java.util.List;
  * lookup does not make it.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip132/orderby_parser.go">LUCI
- *      aip132: orderby_parser.go (FieldPath)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip132/orderby_parser.go">LUCI
+ * aip132: orderby_parser.go (FieldPath)</a>
  */
 public final class FieldPath {
 

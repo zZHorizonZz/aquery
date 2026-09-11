@@ -33,8 +33,8 @@ import java.util.function.Predicate;
  * does not make the lookup slow.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/datamodel.go">LUCI
- *      aip160: datamodel.go (DatabaseTable)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/datamodel.go">LUCI
+ * aip160: datamodel.go (DatabaseTable)</a>
  */
 public final class DatabaseTable {
 
@@ -90,7 +90,7 @@ public final class DatabaseTable {
    * @param path the path from the filter
    * @return the field and the segments that the field did not use
    * @throws InvalidFilterException if no filterable field answers the path or a prefix of it. The message names the fields that
-   *         the client can use
+   * the client can use
    */
   public FilterableField filterableFieldByFieldPath(FieldPath path) {
     List<String> segments = path.segments();
@@ -110,7 +110,7 @@ public final class DatabaseTable {
    * @param path the path from the order
    * @return the sortable field
    * @throws InvalidOrderByException if no sortable field answers the path. The message names the fields that the client can
-   *         sort by
+   * sort by
    */
   public Field sortableFieldByFieldPath(FieldPath path) {
     Field field = fieldByFieldPath.get(path);

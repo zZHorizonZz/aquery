@@ -59,11 +59,11 @@ class ReadMaskTest {
   @ParameterizedTest(name = "[{0}] fails at {1}")
   @CsvSource(delimiter = '|', quoteCharacter = '\'', textBlock = """
       authors.*.given_name | 8
-      name,                | 5
-      name title           | 5
-      `open                | 0
-      labels.              | 7
-      *.name               | 1
+      name, | 5
+      name title | 5
+      `open | 0
+      labels. | 7
+      *.name | 1
       """)
   @DisplayName("refuses what it cannot read, at the position where it stopped")
   void refuses(String readMask, int position) {

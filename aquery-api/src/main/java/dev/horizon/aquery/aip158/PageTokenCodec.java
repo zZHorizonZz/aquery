@@ -93,7 +93,7 @@ public final class PageTokenCodec {
    * @param fingerprint the fingerprint of the list that the token must belong to
    * @return the token, or empty if the client asked for the first page
    * @throws InvalidPageTokenException if this service did not make the token, if a client changed it, or if it belongs to a
-   *         different list
+   * different list
    */
   public Optional<PageToken> decode(String token, String fingerprint) {
     if (token == null || token.isBlank()) {

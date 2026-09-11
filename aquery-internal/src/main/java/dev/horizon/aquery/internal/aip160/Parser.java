@@ -56,8 +56,8 @@ import java.util.List;
  * with three octal digits. The parser refuses all other escapes and a new line in a string.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI
- *      aip160: filter_parser.go (parser)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI
+ * aip160: filter_parser.go (parser)</a>
  */
 final class Parser {
 

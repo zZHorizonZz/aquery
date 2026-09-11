@@ -47,12 +47,12 @@ class SelectClauseTest {
 
   @ParameterizedTest(name = "[{0}] reads [{1}]")
   @CsvSource(delimiter = '|', quoteCharacter = '\'', textBlock = """
-      title,name                  | T.book_id, T.title
-      author                      | T.author_given, T.author_family
-      author.family_name          | T.author_family
-      labels.site                 | T.labels
+      title,name | T.book_id, T.title
+      author | T.author_given, T.author_family
+      author.family_name | T.author_family
+      labels.site | T.labels
       labels.`site name`,labels.a | T.labels
-      published                   | T.published_date, T.published_zone
+      published | T.published_date, T.published_zone
       """)
   @DisplayName("reads only the columns of the selected fields")
   void subsets(String readMask, String expectedSql) {
@@ -61,10 +61,10 @@ class SelectClauseTest {
 
   @ParameterizedTest(name = "[{0}]")
   @CsvSource(delimiter = '|', textBlock = """
-      pages            | no readable field 'pages'
-      unknown          | no readable field 'unknown'
-      title.subtitle   | no readable field 'title.subtitle'
-      author.middle    | no readable field 'author.middle'
+      pages | no readable field 'pages'
+      unknown | no readable field 'unknown'
+      title.subtitle | no readable field 'title.subtitle'
+      author.middle | no readable field 'author.middle'
       """)
   @DisplayName("refuses a path that selects no readable field, naming the readable fields")
   void refusesUnknownPaths(String readMask, String expectedMessage) {

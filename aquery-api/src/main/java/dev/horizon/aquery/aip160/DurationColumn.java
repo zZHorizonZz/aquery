@@ -14,8 +14,8 @@ import java.util.Set;
  * The field supports all order operators: {@code = != < <= > >=}.
  *
  * @see <a href=
- *      "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/duration_column.go">LUCI
- *      aip160: duration_column.go (DurationColumn)</a>
+ * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/duration_column.go">LUCI
+ * aip160: duration_column.go (DurationColumn)</a>
  */
 public class DurationColumn extends Int64Column {
 
