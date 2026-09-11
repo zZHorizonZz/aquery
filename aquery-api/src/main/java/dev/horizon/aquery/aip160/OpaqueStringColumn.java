@@ -19,9 +19,7 @@ import java.util.function.UnaryOperator;
  * An order_by clause cannot sort by the field. The database order of the encoded values is not the logical order
  * of the field. A bare value in the filter cannot match the field.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/opaque_string_column.go">LUCI
- * aip160: opaque_string_column.go (OpaqueStringColumn)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/opaque_string_column.go">LUCI aip160: opaque_string_column.go (OpaqueStringColumn)</a>
  */
 public class OpaqueStringColumn extends SimpleColumn {
 

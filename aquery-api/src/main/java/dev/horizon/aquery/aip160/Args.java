@@ -33,9 +33,7 @@ import java.util.regex.Pattern;
  * Each reader gives the value in the type that the backend keeps. The backend then writes the value into the
  * SQL in the form that the database expects.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/arg_parsers.go">LUCI
- * aip160: arg_parsers.go (Coerce* constants, EnumDefinition)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/arg_parsers.go">LUCI aip160: arg_parsers.go (Coerce* constants, EnumDefinition)</a>
  */
 public final class Args {
 

@@ -25,9 +25,7 @@ import java.util.Set;
  * The has operator ({@code :}) matches a substring, as in LUCI. AIP-160 does not define the has operator for a
  * string field.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/string_column.go">LUCI
- * aip160: string_column.go (StringColumn)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/string_column.go">LUCI aip160: string_column.go (StringColumn)</a>
  */
 public class StringColumn extends SimpleColumn {
 

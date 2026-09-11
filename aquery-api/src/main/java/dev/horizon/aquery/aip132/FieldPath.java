@@ -31,9 +31,7 @@ import java.util.List;
  * canonical form. The path makes the canonical form only when a caller asks for it the first time. Thus a map
  * lookup does not make it.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip132/orderby_parser.go">LUCI
- * aip132: orderby_parser.go (FieldPath)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip132/orderby_parser.go">LUCI aip132: orderby_parser.go (FieldPath)</a>
  */
 public final class FieldPath {
 

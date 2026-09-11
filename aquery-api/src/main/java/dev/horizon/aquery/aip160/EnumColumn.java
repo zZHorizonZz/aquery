@@ -15,9 +15,7 @@ import java.util.Set;
  * The field supports equality and inequality only. AIP-160 says that an enum field does not support the order
  * comparisons.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/enum_column.go">LUCI
- * aip160: enum_column.go (EnumColumn)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/enum_column.go">LUCI aip160: enum_column.go (EnumColumn)</a>
  */
 public class EnumColumn extends Int64Column {
 

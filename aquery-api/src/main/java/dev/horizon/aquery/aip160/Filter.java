@@ -53,9 +53,7 @@ import java.util.stream.Stream;
  * {@link #toString()} writes the tree in a stable form. Tests and error messages use it. It is not the text that
  * the client wrote.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI
- * aip160: filter_parser.go (Filter AST)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI aip160: filter_parser.go (Filter AST)</a>
  */
 public final class Filter {
 

@@ -10,8 +10,7 @@ import dev.horizon.aquery.aip132.FieldPath;
  * opaque string supports an exact match, but not a substring. The generator refuses all other operators with this
  * error. The message names the operator, the field and the field type. Thus the client knows what failed.
  *
- * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/field_backends.go">LUCI aip160:
- * field_backends.go (OperatorNotImplementedError)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/field_backends.go">LUCI aip160: field_backends.go (OperatorNotImplementedError)</a>
  */
 public final class OperatorNotImplementedException extends InvalidFilterException {
 

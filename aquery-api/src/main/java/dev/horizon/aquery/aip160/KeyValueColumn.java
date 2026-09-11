@@ -36,9 +36,7 @@ import java.util.Set;
  * <p>
  * An order_by clause cannot sort by the field. A bare value in the filter cannot match the field.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/key_value_column.go">LUCI
- * aip160: key_value_column.go (KeyValueColumn)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/key_value_column.go">LUCI aip160: key_value_column.go (KeyValueColumn)</a>
  */
 public class KeyValueColumn extends SimpleColumn {
 

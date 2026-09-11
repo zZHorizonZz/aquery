@@ -22,9 +22,7 @@ import java.util.function.Function;
  * The SQL contains the database name as it is. Thus the name must be a constant of the server. It must not be
  * text from a client.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/simple_column.go">LUCI
- * aip160: simple_column.go (SimpleColumn)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/simple_column.go">LUCI aip160: simple_column.go (SimpleColumn)</a>
  */
 public class SimpleColumn implements FieldBackend {
 

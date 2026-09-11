@@ -55,9 +55,7 @@ import java.util.List;
  * {@code \xHH}, {@code \UHHHHHHHH}, a backslash and a lowercase u with four hexadecimal digits, and a backslash
  * with three octal digits. The parser refuses all other escapes and a new line in a string.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI
- * aip160: filter_parser.go (parser)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI aip160: filter_parser.go (parser)</a>
  */
 final class Parser {
 

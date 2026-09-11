@@ -9,8 +9,7 @@ import dev.horizon.aquery.aip132.FieldPath;
  * Only a key-value field has members. The generator refuses the dot for all other fields. The message tells the
  * client to remove the dot.
  *
- * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/field_backends.go">LUCI aip160:
- * field_backends.go (FieldsUnsupportedError)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/field_backends.go">LUCI aip160: field_backends.go (FieldsUnsupportedError)</a>
  */
 public final class FieldsUnsupportedException extends InvalidFilterException {
 

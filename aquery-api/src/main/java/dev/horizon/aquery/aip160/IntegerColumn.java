@@ -14,9 +14,7 @@ import java.util.Set;
  * The SQL contains the number as a literal. An integer cannot change the meaning of the statement, so it binds
  * no parameter.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/int_column.go">LUCI
- * aip160: int_column.go (IntegerColumn)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/int_column.go">LUCI aip160: int_column.go (IntegerColumn)</a>
  */
 public class IntegerColumn extends Int64Column {
 

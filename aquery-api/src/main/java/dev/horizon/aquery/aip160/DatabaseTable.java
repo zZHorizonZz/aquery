@@ -32,9 +32,7 @@ import java.util.function.Predicate;
  * The lookup tries only prefixes that are not longer than the longest filterable path. Thus a very long path
  * does not make the lookup slow.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/datamodel.go">LUCI
- * aip160: datamodel.go (DatabaseTable)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/datamodel.go">LUCI aip160: datamodel.go (DatabaseTable)</a>
  */
 public final class DatabaseTable {
 

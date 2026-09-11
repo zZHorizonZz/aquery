@@ -21,9 +21,7 @@ import java.util.StringJoiner;
  * <p>
  * The output is safe against SQL injection. It contains no text from a client.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/orderby_generator.go">LUCI
- * aip160: orderby_generator.go (OrderByClause, MergeWithDefaultOrder)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/orderby_generator.go">LUCI aip160: orderby_generator.go (OrderByClause, MergeWithDefaultOrder)</a>
  */
 public final class OrderByClause {
 

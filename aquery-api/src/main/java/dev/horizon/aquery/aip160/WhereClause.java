@@ -45,9 +45,7 @@ import java.util.List;
  * different parameter of the statement, for example a limit or a keyset cursor. The table alias and the prefix
  * must be SQL identifiers, as {@link SqlGenerator} specifies.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_generator.go">LUCI
- * aip160: filter_generator.go (WhereClause)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_generator.go">LUCI aip160: filter_generator.go (WhereClause)</a>
  */
 public final class WhereClause {
 

@@ -32,9 +32,7 @@ import java.util.Objects;
  * {@link RepeatedStringColumn} cannot be sortable. Thus the server finds this error at startup, not in a
  * request.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/datamodel.go">LUCI
- * aip160: datamodel.go (Field)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/datamodel.go">LUCI aip160: datamodel.go (Field)</a>
  */
 public record Field(FieldPath fieldPath, boolean sortable, boolean filterable, boolean implicitFilter, boolean readable,
     FieldBackend backend) {

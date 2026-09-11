@@ -15,8 +15,7 @@ import java.util.Set;
  * The order_by parser that the internal module supplies to the api. It reads the text one token at a time with
  * {@link FieldPathScanner}.
  *
- * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip132/orderby_parser.go">LUCI aip132:
- * orderby_parser.go (ParseOrderBy)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip132/orderby_parser.go">LUCI aip132: orderby_parser.go (ParseOrderBy)</a>
  */
 public final class InternalOrderByParser implements OrderByParser {
 

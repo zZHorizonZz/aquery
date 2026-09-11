@@ -21,9 +21,7 @@ import java.util.List;
  * Two differences from LUCI make errors clearer. A string without a closing quote is an error, not text. A
  * character that starts no token is an error at its offset.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI
- * aip160: filter_parser.go (filterLexer)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI aip160: filter_parser.go (filterLexer)</a>
  */
 final class Lexer {
 

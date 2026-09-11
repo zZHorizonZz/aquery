@@ -34,8 +34,7 @@ import java.util.List;
  * <p>
  * The parser comes from the module path or the class path at runtime. The internal module supplies it.
  *
- * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip132/orderby_parser.go">LUCI aip132:
- * orderby_parser.go (ParseOrderBy)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip132/orderby_parser.go">LUCI aip132: orderby_parser.go (ParseOrderBy)</a>
  */
 public final class Order {
 

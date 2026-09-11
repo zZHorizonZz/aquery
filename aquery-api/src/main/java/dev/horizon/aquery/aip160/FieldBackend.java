@@ -46,9 +46,7 @@ import java.util.stream.Stream;
  * and {@link Generator#literal(boolean)}. Column references come only from {@link ColumnReferences}. A backend
  * that does not obey this rule makes the full library unsafe against SQL injection.
  *
- * @see <a href=
- * "https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/field_backends.go">LUCI
- * aip160: field_backends.go (FieldBackend)</a>
+ * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/field_backends.go">LUCI aip160: field_backends.go (FieldBackend)</a>
  */
 public interface FieldBackend {
 
