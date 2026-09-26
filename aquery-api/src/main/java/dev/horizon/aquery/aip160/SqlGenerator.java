@@ -1,37 +1,28 @@
 package dev.horizon.aquery.aip160;
 
+import dev.horizon.aquery.Parameters;
 import dev.horizon.aquery.aip160.FieldBackend.Generator;
-import dev.horizon.aquery.aip160.WhereClause.QueryParameter;
-import dev.horizon.aquery.common.Identifiers;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Objects;
 
 /**
- * The {@link Generator} of one SQL fragment. It adds the table alias to the columns, binds values with the
- * parameter prefix, and keeps the parameters that it binds.
+ * The {@link Generator} of one SQL fragment. It adds the table alias to the columns, and binds values in the
+ * parameters of the statement.
  *
  * <p>
  * {@link WhereClause} and {@code Keyset} write through this generator. A caller can also use it to test a backend.
  *
  * <p>
- * The table alias follows the rules of {@link TableAlias}. The parameter prefix keeps the parameter names different
- * from the other parameters of the statement. The prefix becomes part of the SQL text. Thus it must be an SQL
- * identifier: letters, digits and underscores, with no digit at the start. The constructor throws
- * {@link IllegalArgumentException} for an alias or a prefix that does not obey these rules.
+ * The table alias follows the rules of {@link TableAlias}. The constructor throws {@link IllegalArgumentException}
+ * for an alias that does not obey these rules.
  */
 public final class SqlGenerator implements Generator {
 
   private final TableAlias tableAlias;
-  private final String parameterPrefix;
-  private final List<QueryParameter> parameters = new ArrayList<>();
+  private final Parameters parameters;
 
-  public SqlGenerator(String tableAlias, String parameterPrefix) {
-    if (parameterPrefix == null || !Identifiers.isIdentifier(parameterPrefix)) {
-      throw new IllegalArgumentException(
-          "parameter prefixes are SQL identifiers of letters, digits and '_', was '" + parameterPrefix + "'");
-    }
+  public SqlGenerator(String tableAlias, Parameters parameters) {
     this.tableAlias = new TableAlias(tableAlias);
-    this.parameterPrefix = parameterPrefix;
+    this.parameters = Objects.requireNonNull(parameters, "parameters");
   }
 
   @Override
@@ -40,28 +31,7 @@ public final class SqlGenerator implements Generator {
   }
 
   @Override
-  public String bindString(String value) {
-    String name = parameterPrefix + parameters.size();
-    parameters.add(new QueryParameter(name, value));
-    return "@" + name;
-  }
-
-  @Override
-  public String literal(long value) {
-    return Long.toString(value);
-  }
-
-  @Override
-  public String literal(boolean value) {
-    return value ? "TRUE" : "FALSE";
-  }
-
-  /**
-   * Gives the parameters that the generator bound.
-   *
-   * @return the parameters, in the sequence of the binds. The list cannot change
-   */
-  public List<QueryParameter> parameters() {
-    return List.copyOf(parameters);
+  public String bind(Object value) {
+    return parameters.bind(value);
   }
 }

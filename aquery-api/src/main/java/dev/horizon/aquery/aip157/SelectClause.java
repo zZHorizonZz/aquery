@@ -65,7 +65,7 @@ public final class SelectClause {
    * @return the columns with a comma between them, and the selected fields in the sequence of the schema
    * @throws InvalidReadMaskException if a path of the mask selects no readable field
    * @throws IllegalStateException if the table declares no readable fields
-   * @throws IllegalArgumentException if the table alias starts with {@code _}, or if it is not an SQL identifier
+   * @throws IllegalArgumentException if the table alias starts with {@code aquery_}, or if it is not an SQL identifier
    */
   public static Result of(DatabaseTable table, ReadMask mask, String tableAlias) {
     TableAlias columns = new TableAlias(tableAlias);

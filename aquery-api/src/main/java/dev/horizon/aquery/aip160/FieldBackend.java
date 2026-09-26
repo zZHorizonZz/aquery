@@ -10,10 +10,10 @@ import java.util.stream.Stream;
  * Writes the SQL that filters, sorts and reads one logical field. The backend knows how the database keeps the field.
  *
  * <p>
- * The database keeps many fields in the same form that the API shows. For example, a STRING field is in a STRING
- * column. Other fields have a different form. The API can show a test identifier as one string, but the
- * database can keep it as several parts. The database can keep a duration as nanoseconds in an INT64 column. The
- * backend connects the two forms.
+ * The database keeps many fields in the same form that the API shows. For example, a string field is in a VARCHAR
+ * column. Other fields have a different form. The API can show a test identifier as one string, but the database
+ * can keep it as several parts. The database can keep a duration as nanoseconds in a BIGINT column. The backend
+ * connects the two forms.
  *
  * <p>
  * This interface is the extension point of the library. To add a new type of field, write a new implementation
@@ -41,10 +41,18 @@ import java.util.stream.Stream;
  * at startup, not in each request.
  *
  * <p>
- * All implementations must obey one rule. Text from a client goes into the SQL only through
- * {@link Generator#bindString}. Numbers and booleans go into the SQL only through {@link Generator#literal(long)}
- * and {@link Generator#literal(boolean)}. Column references come only from {@link ColumnReferences}. A backend
- * that does not obey this rule makes the full library unsafe against SQL injection.
+ * All implementations must obey one rule. A value goes into the SQL only through {@link Generator#bind}. The SQL
+ * text contains only placeholders, column references from {@link ColumnReferences} and constant SQL of the backend.
+ * A backend that does not obey this rule makes the full library unsafe against SQL injection.
+ *
+ * <p>
+ * Each placeholder binds its own value. If the SQL uses a value two times, the backend binds it two times. The
+ * backend binds the values in the sequence of their placeholders in its SQL text. Thus a placeholder without a
+ * number, such as {@code ?}, gets the correct value.
+ *
+ * <p>
+ * The SQL must be portable ISO SQL. PostgreSQL, MySQL, SQL Server, Oracle and H2 must all accept it, unless the
+ * storage of the field needs a feature that an engine does not have, for example an array column.
  *
  * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/field_backends.go">LUCI aip160: field_backends.go (FieldBackend)</a>
  */
@@ -136,8 +144,8 @@ public interface FieldBackend {
    *
    * <p>
    * Most fields sort by one column. Some fields come from several columns, or from an expression such as
-   * {@code IF(Column2 = 'blah', 1, 0)}. These fields give one key for each expression. The generator calls this
-   * method only on a backend that {@link #supportsSorting() supports sorting}.
+   * {@code CASE WHEN Column2 = 'blah' THEN 1 ELSE 0 END}. These fields give one key for each expression. The
+   * generator calls this method only on a backend that {@link #supportsSorting() supports sorting}.
    *
    * @param descending true if the client asked for the field in descending order
    * @param columns the names of the table columns
@@ -172,20 +180,35 @@ public interface FieldBackend {
   }
 
   /**
-   * Writes the SQL value for one cursor value of this field. Keyset pagination uses this value.
+   * Reads the text of a cursor, and gives the value that keyset pagination binds.
    *
    * <p>
-   * A cursor value is the text form of the database value of the field in the last row of a page. The default
-   * implementation binds the text as a string. A column can contain numbers or booleans. Then its backend writes
-   * a literal of that type, so that the comparison with the column has the correct type.
+   * A page token keeps the value of the field in the last row of a page as text. {@link #cursorText} writes that
+   * text. This method changes the text back into a value of the type of the column, so that the comparison with
+   * the column has the correct type. The default implementation gives the text as a string.
    *
-   * @param cursorValue the text form of the database value
-   * @param generator the generator that binds values
-   * @return the SQL value: a bound parameter or a literal
+   * @param cursorText the text in the page token
+   * @return the value to bind. It cannot be null
    * @throws IllegalArgumentException if the text is not a value of this field
    */
-  default String cursorArgument(String cursorValue, Generator generator) {
-    return generator.bindString(cursorValue);
+  default Object cursorValue(String cursorText) {
+    return cursorText;
+  }
+
+  /**
+   * Writes the text of a cursor from the value of the field in a row.
+   *
+   * <p>
+   * The server reads the value of the field in the last row of a page. This method changes the value into the text
+   * that the page token keeps. {@link #cursorValue} reads the text again. The default implementation gives
+   * {@link String#valueOf(Object)}.
+   *
+   * @param value the value that the server read from the row
+   * @return the text for the page token
+   * @throws IllegalArgumentException if the value is not a value of this field
+   */
+  default String cursorText(Object value) {
+    return String.valueOf(value);
   }
 
   /**
@@ -258,28 +281,13 @@ public interface FieldBackend {
      * Binds the value as a query parameter, and gives the placeholder for the parameter.
      *
      * <p>
-     * The value never becomes part of the SQL text. This is the only way that client text goes into the
-     * statement.
+     * The value never becomes part of the SQL text. This is the only way that a value goes into the statement.
+     * Bind the value in the Java type that the driver sends for the column, for example {@link Long} for a BIGINT
+     * column. Call this method once for each placeholder, in the sequence of the placeholders in the SQL text.
      *
-     * @param value the value to bind
-     * @return the placeholder, for example {@code @p_0}
+     * @param value the value to bind. It cannot be null
+     * @return the placeholder, for example {@code ?} or {@code $1}
      */
-    String bindString(String value);
-
-    /**
-     * Writes the integer as an SQL literal. Digits and a sign cannot change the meaning of the statement.
-     *
-     * @param value the integer
-     * @return the literal, for example {@code -30}
-     */
-    String literal(long value);
-
-    /**
-     * Writes the boolean as an SQL literal.
-     *
-     * @param value the boolean
-     * @return {@code TRUE} or {@code FALSE}
-     */
-    String literal(boolean value);
+    String bind(Object value);
   }
 }

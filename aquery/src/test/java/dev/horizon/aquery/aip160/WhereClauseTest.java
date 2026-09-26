@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.horizon.aquery.InvalidQueryException;
+import dev.horizon.aquery.ParameterStyle;
+import dev.horizon.aquery.Parameters;
 import dev.horizon.aquery.aip160.KeyValueColumn.Representation;
 import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
@@ -22,22 +24,26 @@ class WhereClauseTest {
       new Field.Builder("path", "to", "keyvalue").backend(new KeyValueColumn("db_kv", Representation.STRING_ARRAY)).filterable()
           .build());
 
+  private static Parameters parameters() {
+    return new Parameters(ParameterStyle.QUESTION_MARK);
+  }
+
   @Test
   @DisplayName("an empty filter matches everything and binds nothing")
   void emptyFilter() {
-    WhereClause.Result result = WhereClause.of(table, Filter.parse(""), "T", "p_");
+    Parameters parameters = parameters();
 
-    assertThat(result.parameters()).isEmpty();
-    assertThat(result.sql()).isEqualTo("(TRUE)");
+    assertThat(WhereClause.of(table, Filter.parse(""), "T", parameters)).isEqualTo("(1 = 1)");
+    assertThat(parameters.values()).isEmpty();
   }
 
   @Test
   @DisplayName("a null filter matches everything and binds nothing")
   void nullFilter() {
-    WhereClause.Result result = WhereClause.of(table, null, "T", "p_");
+    Parameters parameters = parameters();
 
-    assertThat(result.parameters()).isEmpty();
-    assertThat(result.sql()).isEqualTo("(TRUE)");
+    assertThat(WhereClause.of(table, null, "T", parameters)).isEqualTo("(1 = 1)");
+    assertThat(parameters.values()).isEmpty();
   }
 
   @Test
@@ -45,21 +51,15 @@ class WhereClauseTest {
   void complexFilter() {
     Filter filter = Filter.parse(
         "implicit (foo=\"explicitone\") OR -path.to.bar=\"explicittwo\" AND foo!=\"explicitthree\" OR path.to.baz:\"explicitfour\" OR path.to.keyvalue.key:\"explicitfive\"");
+    Parameters parameters = new Parameters(ParameterStyle.DOLLAR);
 
-    WhereClause.Result result = WhereClause.of(table, filter, "T", "p_");
+    String sql = WhereClause.of(table, filter, "T", parameters);
 
-    assertThat(result.parameters())
-        .containsExactly(
-            new WhereClause.QueryParameter("p_0", "%implicit%"),
-            new WhereClause.QueryParameter("p_1", "%implicit%"),
-            new WhereClause.QueryParameter("p_2", "explicitone"),
-            new WhereClause.QueryParameter("p_3", "explicittwo"),
-            new WhereClause.QueryParameter("p_4", "explicitthree"),
-            new WhereClause.QueryParameter("p_5", "%explicitfour%"),
-            new WhereClause.QueryParameter("p_6", "key:%explicitfive%"));
-
-    assertThat(result.sql()).isEqualTo(
-        "(((T.db_foo LIKE @p_0) OR (T.db_bar LIKE @p_1)) AND ((T.db_foo = @p_2) OR (NOT (T.db_bar = @p_3))) AND ((T.db_foo <> @p_4) OR (T.db_baz LIKE @p_5) OR (EXISTS (SELECT 1 FROM UNNEST(T.db_kv) as _v WHERE _v LIKE @p_6))))");
+    assertThat(parameters.values())
+        .containsExactly("%implicit%", "%implicit%", "explicitone", "explicittwo", "explicitthree", "%explicitfour%",
+            "key:%explicitfive%");
+    assertThat(sql).isEqualTo(
+        "(((T.db_foo LIKE $1 ESCAPE '!') OR (T.db_bar LIKE $2 ESCAPE '!')) AND ((T.db_foo = $3) OR (NOT (T.db_bar = $4))) AND ((T.db_foo <> $5) OR (T.db_baz LIKE $6 ESCAPE '!') OR (EXISTS (SELECT 1 FROM UNNEST(T.db_kv) AS aquery_u(aquery_v) WHERE aquery_v LIKE $7 ESCAPE '!'))))");
   }
 
   @Test
@@ -67,7 +67,7 @@ class WhereClauseTest {
   void fieldDoesNotExist() {
     Filter filter = Filter.parse("path.to.nonexisting=\"somevalue\"");
 
-    assertThatThrownBy(() -> WhereClause.of(table, filter, "T", "p_"))
+    assertThatThrownBy(() -> WhereClause.of(table, filter, "T", parameters()))
         .isInstanceOf(InvalidQueryException.class)
         .hasMessageContaining("no filterable field 'path.to.nonexisting' or a prefix thereof")
         .hasMessageContaining("foo")
@@ -82,7 +82,7 @@ class WhereClauseTest {
     Filter filter = Filter.parse(longest);
 
     long start = System.nanoTime();
-    assertThatThrownBy(() -> WhereClause.of(table, filter, "T", "p_")).isInstanceOf(InvalidQueryException.class);
+    assertThatThrownBy(() -> WhereClause.of(table, filter, "T", parameters())).isInstanceOf(InvalidQueryException.class);
     assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofMillis(500));
   }
 
@@ -91,7 +91,7 @@ class WhereClauseTest {
   void quotedLeftHandSide() {
     Filter filter = Filter.parse("\"foo\"=\"somevalue\"");
 
-    assertThatThrownBy(() -> WhereClause.of(table, filter, "T", "p_"))
+    assertThatThrownBy(() -> WhereClause.of(table, filter, "T", parameters()))
         .isInstanceOf(InvalidQueryException.class)
         .hasMessageContaining("expected a field name on the left hand side");
   }
@@ -101,7 +101,7 @@ class WhereClauseTest {
   void noImplicitFields() {
     DatabaseTable plain = new DatabaseTable(new Field.Builder("foo").backend(new StringColumn("db_foo")).filterable().build());
 
-    assertThatThrownBy(() -> WhereClause.of(plain, Filter.parse("bare"), "T", "p_"))
+    assertThatThrownBy(() -> WhereClause.of(plain, Filter.parse("bare"), "T", parameters()))
         .isInstanceOf(InvalidQueryException.class)
         .hasMessageContaining("no fields are configured to match the bare value 'bare'");
   }
@@ -109,49 +109,53 @@ class WhereClauseTest {
   @Test
   @DisplayName("a value that looks like SQL is still only a bound value")
   void injection() {
-    WhereClause.Result result = WhereClause.of(table, Filter.parse("foo=\"' OR 1=1 --\""), null, "p");
+    Parameters parameters = parameters();
 
-    assertThat(result.sql()).isEqualTo("(db_foo = @p0)");
-    assertThat(result.parameters()).containsExactly(new WhereClause.QueryParameter("p0", "' OR 1=1 --"));
+    String sql = WhereClause.of(table, Filter.parse("foo=\"' OR 1=1 --\""), null, parameters);
+
+    assertThat(sql).isEqualTo("(db_foo = ?)");
+    assertThat(parameters.values()).containsExactly("' OR 1=1 --");
   }
 
-  @Test
-  @DisplayName("table aliases starting with '_' are reserved for generated SQL")
-  void reservedAlias() {
-    assertThatThrownBy(() -> WhereClause.of(table, null, "_t", "p_"))
+  @ParameterizedTest(name = "alias [{0}]")
+  @ValueSource(strings = { "aquery_t", "AQUERY_T", "Aquery_v" })
+  @DisplayName("table aliases starting with 'aquery_' are reserved for generated SQL")
+  void reservedAlias(String alias) {
+    assertThatThrownBy(() -> WhereClause.of(table, null, alias, parameters()))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("reserved");
+  }
+
+  @ParameterizedTest(name = "alias [{0}]")
+  @ValueSource(strings = { "_t", "aquery", "aqueryt", "t_aquery_" })
+  @DisplayName("other identifiers are table aliases")
+  void unreservedAlias(String alias) {
+    assertThatNoException().isThrownBy(() -> WhereClause.of(table, Filter.parse("foo=\"x\""), alias, parameters()));
   }
 
   @ParameterizedTest(name = "alias [{0}]")
   @ValueSource(strings = { "T; DROP TABLE x", "t.u", "1t", "a b" })
   @DisplayName("table aliases must be SQL identifiers")
   void aliasesAreIdentifiers(String alias) {
-    assertThatThrownBy(() -> WhereClause.of(table, null, alias, "p_")).isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @ParameterizedTest(name = "prefix [{0}]")
-  @ValueSource(strings = { "p-", "p;", "", "1p" })
-  @DisplayName("parameter prefixes must be SQL identifiers")
-  void prefixesAreIdentifiers(String prefix) {
-    assertThatThrownBy(() -> WhereClause.of(table, null, "T", prefix)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> WhereClause.of(table, null, alias, parameters())).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   @DisplayName("without a table alias, columns are named plainly")
   void noAlias() {
-    WhereClause.Result result = WhereClause.of(table, Filter.parse("foo=\"one\""), "", "p");
-
-    assertThat(result.sql()).isEqualTo("(db_foo = @p0)");
+    assertThat(WhereClause.of(table, Filter.parse("foo=\"one\""), "", parameters())).isEqualTo("(db_foo = ?)");
   }
 
   @Test
-  @DisplayName("the parameter prefix keeps filter parameters apart from the statement's own")
-  void prefix() {
-    WhereClause.Result result = WhereClause.of(table, Filter.parse("foo=\"one\""), "T", "filter_");
+  @DisplayName("numbered placeholders continue after the values that the statement already bound")
+  void sharedParameters() {
+    Parameters parameters = new Parameters(ParameterStyle.AT_P);
+    parameters.bind("tenant");
 
-    assertThat(result.sql()).isEqualTo("(T.db_foo = @filter_0)");
-    assertThat(result.parameters()).containsExactly(new WhereClause.QueryParameter("filter_0", "one"));
+    String sql = WhereClause.of(table, Filter.parse("foo=\"one\""), "T", parameters);
+
+    assertThat(sql).isEqualTo("(T.db_foo = @p2)");
+    assertThat(parameters.values()).containsExactly("tenant", "one");
   }
 
   @Test
@@ -159,6 +163,6 @@ class WhereClauseTest {
   void deepFilters() {
     String deep = "(".repeat(Filter.MAX_DEPTH) + "foo=\"x\"" + ")".repeat(Filter.MAX_DEPTH);
 
-    assertThatNoException().isThrownBy(() -> WhereClause.of(table, Filter.parse(deep), "T", "p_"));
+    assertThatNoException().isThrownBy(() -> WhereClause.of(table, Filter.parse(deep), "T", parameters()));
   }
 }

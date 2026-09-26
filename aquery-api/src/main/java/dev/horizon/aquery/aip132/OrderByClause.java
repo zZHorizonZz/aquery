@@ -81,7 +81,7 @@ public final class OrderByClause {
    * @param tableAlias the alias of the table in the statement. Use null or an empty string if the table has no alias
    * @return the clause with a new line at the end, or an empty string for an empty order
    * @throws InvalidOrderByException if a field is not sortable, or if a field occurs two times
-   * @throws IllegalArgumentException if the table alias starts with {@code _}, or if it is not an SQL identifier
+   * @throws IllegalArgumentException if the table alias starts with {@code aquery_}, or if it is not an SQL identifier
    */
   public static String of(DatabaseTable table, List<OrderBy> order, String tableAlias) {
     TableAlias columns = new TableAlias(tableAlias);

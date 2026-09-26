@@ -3,18 +3,20 @@ package dev.horizon.aquery.aip160;
 import java.util.Set;
 
 /**
- * A string field in a STRING database column.
+ * A string field in a character database column, for example VARCHAR.
  *
  * <p>
- * The field supports all operators:
+ * The field supports all operators. Each restriction binds a {@link String}:
  *
  * <ul>
  * <li>{@code name = "dan"} and {@code name != "dan"} compare the column with the bound value. A {@code *} at the
  * start or at the end of the value is a wildcard, as AIP-160 specifies. For example, {@code name = "*.foo"}
- * matches all names that end with {@code .foo}.
- * <li>{@code name < "dan"}, {@code <=}, {@code >} and {@code >=} compare the strings in lexical order.
- * <li>{@code name : "dan"} matches a substring: {@code LIKE '%dan%'}. The SQL escapes the {@code %} and
- * {@code _} characters of the client. Thus they match as usual characters.
+ * matches all names that end with {@code .foo}. The SQL compares such a value with {@code LIKE ? ESCAPE '!'} or
+ * {@code NOT LIKE ? ESCAPE '!'}.
+ * <li>{@code name < "dan"}, {@code <=}, {@code >} and {@code >=} compare the strings in the collation of the
+ * column.
+ * <li>{@code name : "dan"} matches a substring: {@code LIKE '%dan%' ESCAPE '!'}. The SQL escapes the {@code !},
+ * {@code %} and {@code _} characters of the client. Thus they match as usual characters.
  * </ul>
  *
  * <p>
@@ -49,9 +51,9 @@ public class StringColumn extends SimpleColumn {
   public String restrictionQuery(RestrictionContext restriction, Generator generator) {
     String value = argument(restriction, Args::coerceToStringConstant);
     return switch (restriction.operator()) {
-      case HAS -> "(" + column(generator) + " LIKE " + generator.bindString(containsPattern(value)) + ")";
+      case HAS -> "(" + like(column(generator), containsPattern(value), generator) + ")";
       case EQUALS, NOT_EQUALS -> "(" + stringEquality(column(generator), restriction.operator(), value, generator) + ")";
-      default -> comparison(restriction, generator, generator.bindString(value));
+      default -> comparison(restriction, generator, generator.bind(value));
     };
   }
 
@@ -62,6 +64,6 @@ public class StringColumn extends SimpleColumn {
 
   @Override
   public String implicitRestrictionQuery(ImplicitRestrictionContext restriction, Generator generator) {
-    return "(" + column(generator) + " LIKE " + generator.bindString(containsPattern(restriction.argValueUnsafe())) + ")";
+    return "(" + like(column(generator), containsPattern(restriction.argValueUnsafe()), generator) + ")";
   }
 }

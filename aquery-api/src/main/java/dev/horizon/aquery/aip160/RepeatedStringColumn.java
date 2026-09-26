@@ -3,17 +3,17 @@ package dev.horizon.aquery.aip160;
 import java.util.Set;
 
 /**
- * A repeated string field in an array of strings.
+ * A repeated string field in an ISO SQL array of strings, for example {@code VARCHAR ARRAY} or {@code TEXT[]}.
  *
  * <p>
- * The field supports the has operator and equality. The SQL uses EXISTS on the array, because the restriction is
- * true if one element matches:
+ * The field supports the has operator and equality. The SQL uses EXISTS on the UNNEST of the array, because the
+ * restriction is true if one element matches. Each restriction binds a {@link String}:
  *
  * <ul>
  * <li>{@code tags : "prod"} is true if an element contains {@code prod}.
  * <li>{@code tags = "prod"} is true if an element is equal to {@code prod}. A {@code *} at the start or at the end
  * of the value is a wildcard.
- * <li>{@code tags : *} is true if the array has elements, as AIP-160 specifies.
+ * <li>{@code tags : *} is true if the array has elements, as AIP-160 specifies. The SQL uses CARDINALITY.
  * </ul>
  *
  * <p>
@@ -21,7 +21,8 @@ import java.util.Set;
  * equal element.
  *
  * <p>
- * An order_by clause cannot sort by the field. A bare value in the filter cannot match the field.
+ * Only engines with array columns, for example PostgreSQL and H2, can run this SQL. An order_by clause cannot sort
+ * by the field. A bare value in the filter cannot match the field.
  *
  * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/repeated_string_column.go">LUCI aip160: repeated_string_column.go (RepeatedStringColumn)</a>
  */
@@ -47,12 +48,12 @@ public class RepeatedStringColumn extends SimpleColumn {
   public String restrictionQuery(RestrictionContext restriction, Generator generator) {
     String column = column(generator);
     if (restriction.operator() == Operator.HAS && Args.isPresenceWildcard(restriction.arg())) {
-      return "(ARRAY_LENGTH(" + column + ") > 0)";
+      return "(CARDINALITY(" + column + ") > 0)";
     }
     String value = argument(restriction, Args::coerceToStringConstant);
-    String condition = restriction.operator() == Operator.HAS ? "value LIKE " + generator.bindString(containsPattern(value))
-        : stringEquality("value", Operator.EQUALS, value, generator);
-    return "(EXISTS (SELECT value FROM UNNEST(" + column + ") as value WHERE " + condition + "))";
+    String condition = restriction.operator() == Operator.HAS ? like(ELEMENT, containsPattern(value), generator)
+        : stringEquality(ELEMENT, Operator.EQUALS, value, generator);
+    return anyElement(column, condition);
   }
 
   @Override

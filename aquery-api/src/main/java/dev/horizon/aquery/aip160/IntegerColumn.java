@@ -3,7 +3,7 @@ package dev.horizon.aquery.aip160;
 import java.util.Set;
 
 /**
- * An integer field in an INT64 database column.
+ * An integer field in a 64-bit integer database column, for example BIGINT.
  *
  * <p>
  * The field supports all order operators: {@code = != < <= > >=}. The client writes an integer without quotes,
@@ -11,8 +11,8 @@ import java.util.Set;
  * it. The field also refuses a float, for example {@code 2.5}.
  *
  * <p>
- * The SQL contains the number as a literal. An integer cannot change the meaning of the statement, so it binds
- * no parameter.
+ * The SQL compares the column with a placeholder. The restriction binds the integer as a {@link Long}. The text of
+ * a cursor is the decimal text of the integer.
  *
  * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/int_column.go">LUCI aip160: int_column.go (IntegerColumn)</a>
  */
@@ -34,6 +34,7 @@ public class IntegerColumn extends Int64Column {
 
   @Override
   public String restrictionQuery(RestrictionContext restriction, Generator generator) {
-    return comparison(restriction, generator, generator.literal(argument(restriction, Args::coerceToIntegerConstant)));
+    Long value = argument(restriction, Args::coerceToIntegerConstant);
+    return comparison(restriction, generator, generator.bind(value));
   }
 }

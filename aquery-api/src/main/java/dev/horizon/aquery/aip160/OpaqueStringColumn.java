@@ -8,7 +8,7 @@ import java.util.function.UnaryOperator;
  *
  * <p>
  * The encode function changes the value from the client into the value in the column. The restriction binds the
- * encoded value. The client does not see the encoding, and the client does not write it.
+ * encoded value as a {@link String}. The client does not see the encoding, and the client does not write it.
  *
  * <p>
  * The field supports equality and inequality only. A substring match on an encoded value cannot work. The client
@@ -43,7 +43,7 @@ public class OpaqueStringColumn extends SimpleColumn {
   @Override
   public String restrictionQuery(RestrictionContext restriction, Generator generator) {
     String value = argument(restriction, Args::coerceToStringConstant);
-    return comparison(restriction, generator, generator.bindString(encodeFunction.apply(value)));
+    return comparison(restriction, generator, generator.bind(encodeFunction.apply(value)));
   }
 
   @Override

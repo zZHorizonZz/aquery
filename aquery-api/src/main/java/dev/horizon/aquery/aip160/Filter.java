@@ -15,8 +15,8 @@ import java.util.stream.Stream;
  * <a href="https://google.aip.dev/160">AIP-160</a>. The parser does not support the function call syntax.
  *
  * <p>
- * An empty filter matches all rows. Blank text gives an empty filter. An empty filter compiles to {@code (TRUE)}
- * and binds no parameters.
+ * An empty filter matches all rows. Blank text gives an empty filter. An empty filter compiles to {@code (1 = 1)}
+ * and binds no values.
  *
  * <p>
  * The tree below this root follows the AIP-160 grammar. Each type is one level of the grammar. The shape of the

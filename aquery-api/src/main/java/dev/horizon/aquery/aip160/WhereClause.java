@@ -1,5 +1,6 @@
 package dev.horizon.aquery.aip160;
 
+import dev.horizon.aquery.Parameters;
 import dev.horizon.aquery.aip132.FieldPath;
 import dev.horizon.aquery.aip160.FieldBackend.ImplicitRestrictionContext;
 import dev.horizon.aquery.aip160.FieldBackend.RestrictionContext;
@@ -14,11 +15,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Writes a Standard SQL WHERE clause from a table schema and a parsed AIP-160 filter.
+ * Writes an ISO SQL WHERE clause from a table schema and a parsed AIP-160 filter.
  *
  * <p>
  * The clause is a boolean SQL expression in parentheses. It does not include the {@code WHERE} keyword. An empty
- * filter compiles to {@code (TRUE)} and binds no parameters.
+ * filter compiles to {@code (1 = 1)} and binds no values.
  *
  * <p>
  * The compiler works in these steps:
@@ -37,13 +38,12 @@ import java.util.List;
  *
  * <p>
  * The output is safe against SQL injection because of its design. The column names come from the schema. All
- * text values from the client are bound parameters. Numbers and booleans are literals that the backends parsed.
- * Thus the client text never becomes part of the SQL text.
+ * values from the client are bound values. Thus the client text never becomes part of the SQL text.
  *
  * <p>
- * The parameter names start with the prefix of the call. Thus a filter parameter cannot have the same name as a
- * different parameter of the statement, for example a limit or a keyset cursor. The table alias and the prefix
- * must be SQL identifiers, as {@link SqlGenerator} specifies.
+ * The clause binds its values in the {@link Parameters} of the statement, in the sequence of their placeholders in
+ * the SQL text. Use the same parameters for the other clauses of the statement, for example a keyset. Then the
+ * placeholders do not collide. The table alias must be an SQL identifier, as {@link TableAlias} specifies.
  *
  * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_generator.go">LUCI aip160: filter_generator.go (WhereClause)</a>
  */
@@ -58,46 +58,23 @@ public final class WhereClause {
   }
 
   /**
-   * One parameter of the statement: the name in the SQL text and the value to bind.
-   */
-  public record QueryParameter(String name, String value) {
-  }
-
-  /**
-   * The result of a compile: the SQL expression and its parameters.
-   *
-   * <p>
-   * Give both to the database engine together. The SQL refers to each parameter by name. The parameter list gives
-   * the value of each name.
-   */
-  public record Result(String sql, List<QueryParameter> parameters) {
-
-    public Result {
-      parameters = List.copyOf(parameters);
-    }
-  }
-
-  /**
    * Compiles the filter for the table.
    *
    * @param table the schema of the table for the filter
    * @param filter the parsed filter. It can be null or empty
    * @param tableAlias the alias of the table in the statement, for example in a JOIN. Use null or an empty string if the table
    * has no alias
-   * @param parameterPrefix the prefix of the parameter names. The prefix keeps the names different from the other parameters of
-   * the statement
-   * @return the boolean SQL expression in parentheses and its parameters
+   * @param parameters the parameters of the statement. The clause binds its values in them
+   * @return the boolean SQL expression in parentheses
    * @throws InvalidFilterException if the filter does not compile for this schema
-   * @throws IllegalArgumentException if the table alias starts with {@code _}, or if the alias or the prefix is not an SQL
-   * identifier
+   * @throws IllegalArgumentException if the table alias starts with {@code aquery_}, or if it is not an SQL identifier
    */
-  public static Result of(DatabaseTable table, Filter filter, String tableAlias, String parameterPrefix) {
-    SqlGenerator generator = new SqlGenerator(tableAlias, parameterPrefix);
+  public static String of(DatabaseTable table, Filter filter, String tableAlias, Parameters parameters) {
+    SqlGenerator generator = new SqlGenerator(tableAlias, parameters);
     if (filter == null || filter.expression() == null) {
-      return new Result("(TRUE)", List.of());
+      return "(1 = 1)";
     }
-    String sql = new WhereClause(table, generator).expressionQuery(filter.expression());
-    return new Result(sql, generator.parameters());
+    return new WhereClause(table, generator).expressionQuery(filter.expression());
   }
 
   private String expressionQuery(Expression expression) {

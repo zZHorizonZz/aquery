@@ -11,11 +11,13 @@ import dev.horizon.aquery.common.Identifiers;
  *
  * <p>
  * The alias becomes part of the SQL text. Thus it must be an SQL identifier: letters, digits and underscores, with
- * no digit at the start. An alias must not start with {@code _}. The library keeps these aliases for the SQL that
- * it writes, for example the {@code _v} of an UNNEST. The constructor throws {@link IllegalArgumentException} for an
- * alias that does not obey these rules.
+ * no digit at the start. An alias must not start with {@code aquery_}, in any case. The library keeps these aliases
+ * for the SQL that it writes, for example the {@code aquery_v} of an UNNEST. The constructor throws
+ * {@link IllegalArgumentException} for an alias that does not obey these rules.
  */
 public final class TableAlias implements ColumnReferences {
+
+  private static final String RESERVED_PREFIX = "aquery_";
 
   private final String prefix;
 
@@ -24,8 +26,8 @@ public final class TableAlias implements ColumnReferences {
       this.prefix = "";
       return;
     }
-    if (alias.startsWith("_")) {
-      throw new IllegalArgumentException("table aliases starting with '_' are reserved for use within generated SQL");
+    if (alias.regionMatches(true, 0, RESERVED_PREFIX, 0, RESERVED_PREFIX.length())) {
+      throw new IllegalArgumentException("table aliases starting with 'aquery_' are reserved for use within generated SQL");
     }
     if (!Identifiers.isIdentifier(alias)) {
       throw new IllegalArgumentException("table aliases are SQL identifiers of letters, digits and '_', was '" + alias + "'");

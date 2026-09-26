@@ -30,8 +30,8 @@ import java.util.regex.Pattern;
  * </ul>
  *
  * <p>
- * Each reader gives the value in the type that the backend keeps. The backend then writes the value into the
- * SQL in the form that the database expects.
+ * Each reader gives the value in the type that the backend keeps. The backend then binds the value in the type
+ * that the database expects.
  *
  * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/arg_parsers.go">LUCI aip160: arg_parsers.go (Coerce* constants, EnumDefinition)</a>
  */
@@ -93,7 +93,7 @@ public final class Args {
    *
    * @param arg the argument of the restriction
    * @return the integer
-   * @throws InvalidFilterException if the client did not write an integer, or if the integer does not fit in an INT64
+   * @throws InvalidFilterException if the client did not write an integer, or if the integer does not fit in 64 bits
    */
   public static long coerceToIntegerConstant(Arg arg) {
     Member member = unquotedMemberOf(arg, "an unquoted integer literal");
@@ -143,7 +143,7 @@ public final class Args {
    * Reads the argument as a duration without quotes: a number with an {@code s} suffix, for example {@code 1.5s}.
    *
    * <p>
-   * The duration is exact to the nanosecond. The number of nanoseconds must fit in an INT64.
+   * The duration is exact to the nanosecond. The number of nanoseconds must fit in 64 bits.
    *
    * @param arg the argument of the restriction
    * @return the duration
@@ -278,7 +278,7 @@ public final class Args {
     try {
       long seconds = Long.parseLong(matcher.group(1));
       long nanos = fraction.isEmpty() ? 0 : Long.parseLong((fraction + "00000000").substring(0, 9));
-      // The column keeps nanoseconds in an INT64. Thus the full duration must fit in an INT64.
+      // The column keeps nanoseconds in a 64-bit integer. Thus the full duration must fit in 64 bits.
       return Duration.ofNanos(Math.addExact(Math.multiplyExact(seconds, NANOS_PER_SECOND), nanos));
     } catch (NumberFormatException | ArithmeticException tooLong) {
       throw new InvalidFilterException("'%s' is too long a duration, at most %d.%09ds", value,

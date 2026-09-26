@@ -3,7 +3,7 @@ package dev.horizon.aquery.aip160;
 import java.util.Set;
 
 /**
- * A boolean field in a BOOL database column.
+ * A boolean field in a BOOLEAN database column.
  *
  * <p>
  * The field supports equality and inequality only. AIP-160 says that a boolean field does not support the order
@@ -11,7 +11,8 @@ import java.util.Set;
  * {@code "true"}, is a string. The field refuses it.
  *
  * <p>
- * The SQL contains the literal {@code TRUE} or {@code FALSE}. A boolean binds no parameter.
+ * The SQL compares the column with a placeholder, as in {@code (T.locked = ?)}. The restriction binds a
+ * {@link Boolean}. The text of a cursor is {@code true} or {@code false}.
  *
  * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/bool_column.go">LUCI aip160: bool_column.go (BoolColumn)</a>
  */
@@ -33,15 +34,24 @@ public class BoolColumn extends SimpleColumn {
 
   @Override
   public String restrictionQuery(RestrictionContext restriction, Generator generator) {
-    return comparison(restriction, generator, generator.literal(argument(restriction, Args::coerceToBoolConstant)));
+    Boolean value = argument(restriction, Args::coerceToBoolConstant);
+    return comparison(restriction, generator, generator.bind(value));
   }
 
   @Override
-  public String cursorArgument(String cursorValue, Generator generator) {
-    return switch (cursorValue) {
-      case "true" -> generator.literal(true);
-      case "false" -> generator.literal(false);
-      default -> throw new IllegalArgumentException("'" + cursorValue + "' is not a boolean");
+  public Object cursorValue(String cursorText) {
+    return switch (cursorText) {
+      case "true" -> Boolean.TRUE;
+      case "false" -> Boolean.FALSE;
+      default -> throw new IllegalArgumentException("'" + cursorText + "' is not a boolean");
     };
+  }
+
+  @Override
+  public String cursorText(Object value) {
+    if (value instanceof Boolean bool) {
+      return bool.toString();
+    }
+    throw new IllegalArgumentException("'" + value + "' is not a boolean");
   }
 }

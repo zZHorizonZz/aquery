@@ -11,7 +11,8 @@ import java.util.function.Function;
  *
  * <p>
  * This backend does not know the database type of the column. Thus it cannot filter the field. It sorts by the
- * order of the database. Use it for fields that clients sort by but do not filter.
+ * order of the database. Use it for fields that clients sort by but do not filter. A cursor value of this backend
+ * is bound as a string.
  *
  * <p>
  * This class is also the parent of the column backends. It contains the parts that they share: the database
@@ -25,6 +26,10 @@ import java.util.function.Function;
  * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/simple_column.go">LUCI aip160: simple_column.go (SimpleColumn)</a>
  */
 public class SimpleColumn implements FieldBackend {
+
+  static final String ELEMENT = "aquery_v";
+
+  private static final String LIKE_ESCAPE = " ESCAPE '!'";
 
   private final String databaseName;
 
@@ -82,15 +87,15 @@ public class SimpleColumn implements FieldBackend {
   }
 
   /**
-   * Writes {@code (column operator value)} with the SQL operator of the restriction.
+   * Writes {@code (column operator placeholder)} with the SQL operator of the restriction.
    *
    * @param restriction the restriction with the operator
    * @param columns the names of the table columns
-   * @param value the SQL value: a bound parameter or a literal
+   * @param placeholder the placeholder of the bound value
    * @return the comparison in parentheses
    */
-  protected final String comparison(RestrictionContext restriction, ColumnReferences columns, String value) {
-    return "(" + column(columns) + " " + restriction.operator().sql() + " " + value + ")";
+  protected final String comparison(RestrictionContext restriction, ColumnReferences columns, String placeholder) {
+    return "(" + column(columns) + " " + restriction.operator().sql() + " " + placeholder + ")";
   }
 
   /**
@@ -111,13 +116,13 @@ public class SimpleColumn implements FieldBackend {
   }
 
   /**
-   * Writes {@code left = value} or {@code left <> value} for a string that the client compares for equality.
+   * Writes {@code left = ?} or {@code left <> ?} for a string that the client compares for equality.
    *
    * <p>
    * AIP-160 lets the client put a wildcard at the start or at the end of the string. The value {@code "*.foo"}
    * matches all values that end with {@code .foo}. The value {@code "foo*"} matches all values that start with
-   * {@code foo}. The SQL compares such a value with LIKE. A {@code *} at a different location is a usual
-   * character.
+   * {@code foo}. The SQL compares such a value with LIKE or NOT LIKE. A {@code *} at a different location is a
+   * usual character.
    *
    * @param left the SQL expression of the string, for example a column reference
    * @param operator {@link Operator#EQUALS} or {@link Operator#NOT_EQUALS}
@@ -128,9 +133,33 @@ public class SimpleColumn implements FieldBackend {
   protected static String stringEquality(String left, Operator operator, String value, Generator generator) {
     String pattern = wildcardPattern(value);
     if (pattern == null) {
-      return left + " " + operator.sql() + " " + generator.bindString(value);
+      return left + " " + operator.sql() + " " + generator.bind(value);
     }
-    return left + (operator == Operator.NOT_EQUALS ? " NOT LIKE " : " LIKE ") + generator.bindString(pattern);
+    return operator == Operator.NOT_EQUALS ? notLike(left, pattern, generator) : like(left, pattern, generator);
+  }
+
+  /**
+   * Writes {@code left LIKE ? ESCAPE '!'} and binds the pattern.
+   *
+   * @param left the SQL expression of the string, for example a column reference
+   * @param pattern the LIKE pattern, with {@code !} as the escape character
+   * @param generator the generator that binds the pattern
+   * @return the comparison without parentheses
+   */
+  protected static String like(String left, String pattern, Generator generator) {
+    return left + " LIKE " + generator.bind(pattern) + LIKE_ESCAPE;
+  }
+
+  /**
+   * Writes {@code left NOT LIKE ? ESCAPE '!'} and binds the pattern.
+   *
+   * @param left the SQL expression of the string, for example a column reference
+   * @param pattern the LIKE pattern, with {@code !} as the escape character
+   * @param generator the generator that binds the pattern
+   * @return the comparison without parentheses
+   */
+  protected static String notLike(String left, String pattern, Generator generator) {
+    return left + " NOT LIKE " + generator.bind(pattern) + LIKE_ESCAPE;
   }
 
   /**
@@ -160,16 +189,32 @@ public class SimpleColumn implements FieldBackend {
   }
 
   /**
-   * Escapes the wildcards in a LIKE pattern.
+   * Escapes the wildcards in a LIKE pattern. The escape character is {@code !}.
    *
    * <p>
    * The {@code %} and {@code _} characters from the client are then usual characters, not wildcards. For example,
-   * the value {@code test_name} then matches only itself. It does not match {@code test3name}.
+   * the value {@code test_name} then matches only itself. It does not match {@code test3name}. A LIKE with this
+   * pattern must declare the escape character with {@code ESCAPE '!'}. The {@code !} is the same on all engines.
+   * A backslash has a special meaning in the string literals of some engines.
    *
    * @param value the string from the client
-   * @return the string with an escape before each backslash, {@code %} and {@code _}
+   * @return the string with a {@code !} before each {@code !}, {@code %} and {@code _}
    */
   protected static String quoteLike(String value) {
-    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    return value.replace("!", "!!").replace("%", "!%").replace("_", "!_");
+  }
+
+  /**
+   * Writes a condition that is true if one element of an array column matches.
+   *
+   * <p>
+   * The condition names the element {@code aquery_v}.
+   *
+   * @param array the SQL expression of the array
+   * @param condition the condition on the element {@code aquery_v}
+   * @return the EXISTS expression in parentheses
+   */
+  static String anyElement(String array, String condition) {
+    return "(EXISTS (SELECT 1 FROM UNNEST(" + array + ") AS aquery_u(" + ELEMENT + ") WHERE " + condition + "))";
   }
 }
