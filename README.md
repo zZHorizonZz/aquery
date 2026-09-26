@@ -10,6 +10,51 @@ fragments and bound values. The SQL is portable ISO SQL. PostgreSQL, MySQL, SQL 
 H2 all run it. The design follows the `aip160` and `aip132` packages of
 [LUCI](https://chromium.googlesource.com/infra/luci/luci-go).
 
+## Installation
+
+aquery is published to [GitHub Packages](https://github.com/zZHorizonZz/aquery/packages). Add the
+repository and the dependency to your `pom.xml`:
+
+<!-- x-release-please-start-version -->
+```xml
+<repositories>
+  <repository>
+    <id>github-aquery</id>
+    <url>https://maven.pkg.github.com/zZHorizonZz/aquery</url>
+  </repository>
+</repositories>
+
+<dependencies>
+  <dependency>
+    <groupId>dev.horizon</groupId>
+    <artifactId>aquery</artifactId>
+    <version>0.1.0</version>
+  </dependency>
+</dependencies>
+```
+<!-- x-release-please-end -->
+
+GitHub Packages needs a token even for public packages. Create a personal access token with the
+`read:packages` scope, and add it to `~/.m2/settings.xml` under the same id:
+
+```xml
+<settings>
+  <servers>
+    <server>
+      <id>github-aquery</id>
+      <username>YOUR_GITHUB_USERNAME</username>
+      <password>YOUR_TOKEN</password>
+    </server>
+  </servers>
+</settings>
+```
+
+In GitHub Actions, use `${{ github.actor }}` and `${{ secrets.GITHUB_TOKEN }}` instead.
+
+Snapshots of `master` are published to the same repository as `0.x.y-SNAPSHOT` versions. Release
+notes are in [CHANGELOG.md](CHANGELOG.md) and on the
+[releases page](https://github.com/zZHorizonZz/aquery/releases).
+
 ## Example
 
 ```java
