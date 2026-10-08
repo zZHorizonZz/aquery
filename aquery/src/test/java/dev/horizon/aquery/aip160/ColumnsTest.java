@@ -12,6 +12,7 @@ import dev.horizon.aquery.aip132.OrderByClause;
 import dev.horizon.aquery.aip160.EnumColumn.Storage;
 import dev.horizon.aquery.aip160.KeyValueColumn.ChildTable;
 import dev.horizon.aquery.aip160.KeyValueColumn.Representation;
+import dev.horizon.aquery.ebnf.EbnfFilterParser;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -26,6 +27,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class ColumnsTest {
+
+  private static final FilterParser EBNF = new EbnfFilterParser();
 
   private static final Args.EnumDefinition STATUS = new Args.EnumDefinition("Status", Map.of("ACTIVE", 1, "INACTIVE", 2), 0);
 
@@ -60,7 +63,7 @@ class ColumnsTest {
 
   private static Compiled compile(DatabaseTable table, String filter) {
     Parameters parameters = new Parameters(ParameterStyle.QUESTION_MARK);
-    String sql = WhereClause.of(table, Filter.parse(filter), "T", parameters);
+    String sql = WhereClause.of(table, EBNF.parse(filter), "T", parameters);
     return new Compiled(sql, parameters.values());
   }
 
@@ -186,7 +189,7 @@ class ColumnsTest {
   void childTableWithoutAlias() {
     Parameters parameters = new Parameters(ParameterStyle.DOLLAR);
 
-    assertThat(WhereClause.of(keyValues, Filter.parse("kv.site = \"pilsen\""), null, parameters)).isEqualTo(
+    assertThat(WhereClause.of(keyValues, EBNF.parse("kv.site = \"pilsen\""), null, parameters)).isEqualTo(
         "(EXISTS (SELECT 1 FROM labels aquery_kv WHERE aquery_kv.owner_id = id AND aquery_kv.label_key = $1 AND aquery_kv.label_value = $2))");
     assertThat(parameters.values()).containsExactly("site", "pilsen");
   }

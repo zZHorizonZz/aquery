@@ -1,6 +1,6 @@
 package dev.horizon.aquery.aip160;
 
-import dev.horizon.aquery.aip160.Filter.Arg;
+import dev.horizon.aquery.aip160.Filter.Value;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -99,17 +99,17 @@ public class SimpleColumn implements FieldBackend {
   }
 
   /**
-   * Reads the argument of the restriction with one of the {@link Args} readers.
+   * Reads the value of the restriction with one of the {@link Args} readers.
    *
    * @param <T> the type of the value
-   * @param restriction the restriction with the argument
-   * @param reader the reader of the argument, for example {@code Args::coerceToStringConstant}
+   * @param restriction the restriction with the value
+   * @param reader the reader of the value, for example {@code Args::coerceToStringConstant}
    * @return the value that the reader gives
-   * @throws InvalidFilterException if the reader refuses the argument. The message names the field of the argument
+   * @throws InvalidFilterException if the reader refuses the value. The message names the field of the restriction
    */
-  protected static <T> T argument(RestrictionContext restriction, Function<Arg, T> reader) {
+  protected static <T> T argument(RestrictionContext restriction, Function<Value, T> reader) {
     try {
-      return reader.apply(restriction.arg());
+      return reader.apply(restriction.value());
     } catch (InvalidFilterException refused) {
       throw new InvalidFilterException("argument for field '%s': %s", restriction.qualifiedFieldPath(), refused.getMessage());
     }
@@ -122,16 +122,18 @@ public class SimpleColumn implements FieldBackend {
    * AIP-160 lets the client put a wildcard at the start or at the end of the string. The value {@code "*.foo"}
    * matches all values that end with {@code .foo}. The value {@code "foo*"} matches all values that start with
    * {@code foo}. The SQL compares such a value with LIKE or NOT LIKE. A {@code *} at a different location is a
-   * usual character.
+   * usual character. A CEL string has no wildcards. {@link Args#hasWildcards} tells which strings have them.
    *
    * @param left the SQL expression of the string, for example a column reference
    * @param operator {@link Operator#EQUALS} or {@link Operator#NOT_EQUALS}
    * @param value the string from the client
+   * @param wildcards true if a {@code *} at the start or at the end of the value is a wildcard
    * @param generator the generator that binds the value
    * @return the comparison without parentheses
    */
-  protected static String stringEquality(String left, Operator operator, String value, Generator generator) {
-    String pattern = wildcardPattern(value);
+  protected static String stringEquality(String left, Operator operator, String value, boolean wildcards,
+      Generator generator) {
+    String pattern = wildcards ? wildcardPattern(value) : null;
     if (pattern == null) {
       return left + " " + operator.sql() + " " + generator.bind(value);
     }
@@ -186,6 +188,23 @@ public class SimpleColumn implements FieldBackend {
    */
   protected static String containsPattern(String value) {
     return "%" + quoteLike(value) + "%";
+  }
+
+  /**
+   * Gives the LIKE pattern for {@link Operator#HAS}, {@link Operator#STARTS_WITH} or {@link Operator#ENDS_WITH}.
+   *
+   * @param operator the operator of the restriction
+   * @param value the string from the client
+   * @return the LIKE pattern: the value with {@code %} after it, before it, or at the two sides
+   * @throws IllegalStateException for a different operator
+   */
+  protected static String matchPattern(Operator operator, String value) {
+    return switch (operator) {
+      case HAS -> containsPattern(value);
+      case STARTS_WITH -> quoteLike(value) + "%";
+      case ENDS_WITH -> "%" + quoteLike(value);
+      default -> throw new IllegalStateException("the operator '" + operator.symbol() + "' does not match a pattern");
+    };
   }
 
   /**

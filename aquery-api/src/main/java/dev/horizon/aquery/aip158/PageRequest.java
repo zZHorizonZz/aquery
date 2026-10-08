@@ -11,7 +11,7 @@ import java.util.Objects;
  * nothing. The page size must be positive.
  *
  * <p>
- * The texts stay texts here. Parse the filter with {@code Filter.parse} and the order with {@code Order.parse} if
+ * The texts stay texts here. Parse the filter with a {@code FilterParser} and the order with {@code Order.parse} if
  * the list uses them. Then the errors name the correct argument.
  */
 public record PageRequest(String filter, String orderBy, int pageSize, String pageToken) {

@@ -1,4 +1,4 @@
-package dev.horizon.aquery.internal.aip160;
+package dev.horizon.aquery.ebnf;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.horizon.aquery.InvalidQueryException;
 import dev.horizon.aquery.aip160.Filter;
-import dev.horizon.aquery.internal.aip160.Lexer.Kind;
+import dev.horizon.aquery.ebnf.Lexer.Kind;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +17,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class FilterParserTest {
+
+  private static final EbnfFilterParser PARSER = new EbnfFilterParser();
 
   @ParameterizedTest(name = "[{0}] lexes as {1}({2})")
   @CsvSource(delimiter = '|', textBlock = """
@@ -247,9 +249,9 @@ class FilterParserTest {
   @MethodSource("parses")
   void parses(String input, String ast) {
     if (ast == null) {
-      assertThatThrownBy(() -> Filter.parse(input)).as(input).isInstanceOf(InvalidQueryException.class);
+      assertThatThrownBy(() -> PARSER.parse(input)).as(input).isInstanceOf(InvalidQueryException.class);
     } else {
-      assertThat(Filter.parse(input).toString()).as(input).isEqualTo(ast);
+      assertThat(new Parser(input).filter().toString()).as(input).isEqualTo(ast);
     }
   }
 
@@ -257,7 +259,7 @@ class FilterParserTest {
   @ValueSource(strings = { "explicit AND ", "test OR ", "(unclosed", "value =", "value > - 30", "\"unterminated", "!x" })
   @DisplayName("refuses what it cannot read, naming the filter field")
   void refuses(String input) {
-    assertThatThrownBy(() -> Filter.parse(input))
+    assertThatThrownBy(() -> PARSER.parse(input))
         .isInstanceOf(InvalidQueryException.class)
         .satisfies(thrown -> assertThat(((InvalidQueryException) thrown).field()).isEqualTo(InvalidQueryException.FILTER));
   }
@@ -272,7 +274,7 @@ class FilterParserTest {
       """)
   @DisplayName("says where in the text the reading stopped")
   void errorPositions(String input, int position) {
-    assertThatThrownBy(() -> Filter.parse(input))
+    assertThatThrownBy(() -> PARSER.parse(input))
         .isInstanceOf(InvalidQueryException.class)
         .satisfies(thrown -> assertThat(((InvalidQueryException) thrown).position()).isEqualTo(position));
   }
@@ -288,7 +290,8 @@ class FilterParserTest {
       """)
   @DisplayName("reads the escapes of Go string literals, as LUCI does")
   void escapes(String input, String expected) {
-    String value = Filter.parse(input).expression().sequences().getFirst().factors().getFirst().terms().getFirst().simple()
+    String value = new Parser(input).filter().expression().sequences().getFirst().factors().getFirst().terms().getFirst()
+        .simple()
         .restriction().comparable().member().value().value();
 
     assertThat(value).isEqualTo(expected);
@@ -298,7 +301,7 @@ class FilterParserTest {
   @ValueSource(strings = { "\"\\q\"", "\"\\'\"", "\"\\xZZ\"", "\"\\uD800\"", "\"\\400\"", "\"new\nline\"" })
   @DisplayName("refuses escapes Go does not have")
   void refusesEscapes(String input) {
-    assertThatThrownBy(() -> Filter.parse(input)).isInstanceOf(InvalidQueryException.class);
+    assertThatThrownBy(() -> PARSER.parse(input)).isInstanceOf(InvalidQueryException.class);
   }
 
   @Test
@@ -306,26 +309,26 @@ class FilterParserTest {
   void longStrings() {
     String filter = "a = \"" + "x".repeat(Filter.MAX_LENGTH - 6) + "\"";
 
-    assertThatNoException().isThrownBy(() -> Filter.parse(filter));
+    assertThatNoException().isThrownBy(() -> PARSER.parse(filter));
   }
 
   @Test
   @DisplayName("refuses parentheses nested deeper than the limit, rather than overflowing the stack")
   void depthLimit() {
-    String allowed = "(".repeat(Filter.MAX_DEPTH) + "a" + ")".repeat(Filter.MAX_DEPTH);
-    String tooDeep = "(".repeat(Filter.MAX_DEPTH + 1) + "a" + ")".repeat(Filter.MAX_DEPTH + 1);
+    String allowed = "(".repeat(EbnfFilterParser.MAX_DEPTH) + "a" + ")".repeat(EbnfFilterParser.MAX_DEPTH);
+    String tooDeep = "(".repeat(EbnfFilterParser.MAX_DEPTH + 1) + "a" + ")".repeat(EbnfFilterParser.MAX_DEPTH + 1);
     String deepest = "(".repeat(Filter.MAX_LENGTH / 2) + "a" + ")".repeat(Filter.MAX_LENGTH / 2 - 1);
 
-    assertThatNoException().isThrownBy(() -> Filter.parse(allowed));
-    assertThatThrownBy(() -> Filter.parse(tooDeep)).isInstanceOf(InvalidQueryException.class).hasMessageContaining("nest");
-    assertThatThrownBy(() -> Filter.parse(deepest)).isInstanceOf(InvalidQueryException.class).hasMessageContaining("nest");
+    assertThatNoException().isThrownBy(() -> PARSER.parse(allowed));
+    assertThatThrownBy(() -> PARSER.parse(tooDeep)).isInstanceOf(InvalidQueryException.class).hasMessageContaining("nest");
+    assertThatThrownBy(() -> PARSER.parse(deepest)).isInstanceOf(InvalidQueryException.class).hasMessageContaining("nest");
   }
 
   @ParameterizedTest(name = "[{0}]")
   @ValueSource(strings = { "regex(name, \"x\")", "foo(bar)", "a = f(x)", "m.key(x)" })
   @DisplayName("refuses function calls rather than reading them as a sequence")
   void refusesFunctionCalls(String input) {
-    assertThatThrownBy(() -> Filter.parse(input))
+    assertThatThrownBy(() -> PARSER.parse(input))
         .isInstanceOf(InvalidQueryException.class)
         .hasMessageContaining("function calls are not supported");
   }

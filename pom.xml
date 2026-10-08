@@ -40,6 +40,8 @@
   <modules>
     <module>aquery-api</module>
     <module>aquery-internal</module>
+    <module>aquery-grammar-ebnf</module>
+    <module>aquery-grammar-cel</module>
     <module>aquery</module>
   </modules>
 
@@ -50,6 +52,7 @@
 
     <junit.version>6.1.2</junit.version>
     <assertj.version>3.27.7</assertj.version>
+    <cel.version>0.14.0</cel.version>
   </properties>
 
   <dependencyManagement>
@@ -88,6 +91,11 @@
           <configuration>
             <release>${maven.compiler.release}</release>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.4.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

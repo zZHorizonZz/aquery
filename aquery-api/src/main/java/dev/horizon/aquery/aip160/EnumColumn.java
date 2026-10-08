@@ -1,6 +1,6 @@
 package dev.horizon.aquery.aip160;
 
-import dev.horizon.aquery.aip160.Filter.Arg;
+import dev.horizon.aquery.aip160.Filter.Value;
 import java.util.Objects;
 import java.util.Set;
 
@@ -85,8 +85,8 @@ public class EnumColumn extends SimpleColumn {
     };
   }
 
-  private String name(Arg arg) {
-    Args.coerceToEnumConstant(arg, definition);
-    return Args.coerceToKeyConstant(arg);
+  private String name(Value value) {
+    Args.coerceToEnumConstant(value, definition);
+    return Args.coerceToKeyConstant(value);
   }
 }

@@ -1,7 +1,7 @@
 package dev.horizon.aquery.aip160;
 
 import dev.horizon.aquery.aip132.FieldPath;
-import dev.horizon.aquery.aip160.Filter.Arg;
+import dev.horizon.aquery.aip160.Filter.Value;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -21,7 +21,7 @@ import java.util.stream.Stream;
  * is a backend that reads one member of the document for each restriction.
  *
  * <p>
- * Each backend declares the parts of AIP-160 and AIP-132 that it supports. The library enforces the declaration.
+ * Each backend declares the parts of the filter language and AIP-132 that it supports. The library enforces the declaration.
  * Thus the backend does not repeat the checks:
  *
  * <ul>
@@ -85,7 +85,7 @@ public interface FieldBackend {
    * Writes the SQL for the restriction on the field.
    *
    * <p>
-   * The restriction names this field, one of the {@link #operators()} and an argument. A restriction can go into
+   * The restriction names this field, one of the {@link #operators()} and a value. A restriction can go into
    * a field that {@link #acceptsNestedFields() accepts nested fields}. Then the nested segments are in
    * {@link RestrictionContext#nestedFields()}.
    *
@@ -93,10 +93,10 @@ public interface FieldBackend {
    * The SQL must be one boolean expression in parentheses, for example {@code "(condition)"}. Other expressions
    * contain it.
    *
-   * @param restriction the field, the nested segments, the operator and the argument
+   * @param restriction the field, the nested segments, the operator and the value
    * @param generator the generator that binds values and names columns
    * @return the SQL expression in parentheses
-   * @throws InvalidFilterException if the backend cannot answer the restriction, for example because the argument has the wrong
+   * @throws InvalidFilterException if the backend cannot answer the restriction, for example because the value has the wrong
    * type
    */
   String restrictionQuery(RestrictionContext restriction, Generator generator);
@@ -216,9 +216,9 @@ public interface FieldBackend {
    *
    * <p>
    * The path can name more than the field. Then the segments after the field are the nested fields. A key-value
-   * field reads its key from them.
+   * field reads its key from them. The value is in the form that the client wrote. Read it with {@link Args}.
    */
-  record RestrictionContext(FieldPath fieldPath, List<String> nestedFields, Operator operator, Arg arg) {
+  record RestrictionContext(FieldPath fieldPath, List<String> nestedFields, Operator operator, Value value) {
 
     public RestrictionContext {
       nestedFields = List.copyOf(nestedFields);

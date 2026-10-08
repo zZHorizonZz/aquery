@@ -3,12 +3,25 @@ package dev.horizon.aquery.aip160;
 import java.util.Set;
 
 /**
- * A comparator of the AIP-160 filter language. It is the operator between a field and its argument, for example
- * the {@code =} in {@code name = "dan"}.
+ * The operator between a field and its value in a {@link Filter.Restriction}, for example the {@code =} in
+ * {@code name = "dan"}.
  *
  * <p>
- * The filter text contains the symbol. Each backend declares the operators that it supports. The generator
- * refuses all other operators before it calls the backend. Thus no backend must refuse them again.
+ * Each backend declares the operators that it supports. The generator refuses all other operators before it
+ * calls the backend. Thus no backend must refuse them again.
+ *
+ * <p>
+ * The symbol is the comparator of AIP-160. The CEL parser gives the same operators:
+ *
+ * <ul>
+ * <li>{@code == != < <= > >=} are {@link #EQUALS}, {@link #NOT_EQUALS} and the order comparisons.
+ * <li>{@code name.contains("x")} is {@link #HAS} with the value {@code "x"}.
+ * <li>{@code has(labels.site)} is {@link #HAS} with the presence wildcard {@code *} on {@code labels.site}.
+ * <li>{@code name.startsWith("x")} and {@code name.endsWith("x")} are {@link #STARTS_WITH} and
+ * {@link #ENDS_WITH}. AIP-160 has no symbol for them.
+ * <li>{@code "x" in tags} is {@link #IN} on {@code tags}. The field contains the value as an element or as a key.
+ * AIP-160 has no symbol for it.
+ * </ul>
  *
  * <p>
  * {@code ORDERED} contains the operators of a field with ordered values: equality, inequality and the four order
@@ -25,7 +38,10 @@ public enum Operator {
   GREATER_THAN(">", ">"),
   NOT_EQUALS("!=", "<>"),
   EQUALS("=", "="),
-  HAS(":", null);
+  HAS(":", null),
+  STARTS_WITH("startsWith", null),
+  ENDS_WITH("endsWith", null),
+  IN("in", null);
 
   public static final Set<Operator> ORDERED = Set.of(EQUALS, NOT_EQUALS, LESS_THAN, LESS_EQUALS, GREATER_THAN,
       GREATER_EQUALS);
@@ -41,9 +57,10 @@ public enum Operator {
   }
 
   /**
-   * Gives the symbol in the filter text.
+   * Gives the symbol of the operator, for filter text and error messages.
    *
-   * @return the symbol, for example {@code !=}
+   * @return the symbol, for example {@code !=}. For an operator without an AIP-160 comparator, the name of the CEL
+   * function, for example {@code startsWith}
    */
   public String symbol() {
     return symbol;
@@ -53,11 +70,12 @@ public enum Operator {
    * Gives the Standard SQL operator that compares two values in the same way.
    *
    * @return the SQL operator, for example {@code <>} for {@code !=}
-   * @throws IllegalStateException for {@link #HAS}. Each backend writes its own SQL for this operator
+   * @throws IllegalStateException for {@link #HAS}, {@link #STARTS_WITH}, {@link #ENDS_WITH} and {@link #IN}. Each
+   * backend writes its own SQL for these operators
    */
   public String sql() {
     if (sql == null) {
-      throw new IllegalStateException("the has operator ':' has no single SQL operator");
+      throw new IllegalStateException("the operator '" + symbol + "' has no single SQL operator");
     }
     return sql;
   }
@@ -65,7 +83,7 @@ public enum Operator {
   /**
    * Gives the operator that has the symbol.
    *
-   * @param symbol the symbol in the filter text, for example {@code <=}
+   * @param symbol the symbol of the operator, for example {@code <=}
    * @return the operator
    * @throws IllegalArgumentException if no operator has the symbol
    */
@@ -75,6 +93,6 @@ public enum Operator {
         return operator;
       }
     }
-    throw new IllegalArgumentException("no AIP-160 comparator is written '" + symbol + "'");
+    throw new IllegalArgumentException("no operator is written '" + symbol + "'");
   }
 }

@@ -14,6 +14,9 @@ import java.util.Set;
  * <li>{@code tags = "prod"} is true if an element is equal to {@code prod}. A {@code *} at the start or at the end
  * of the value is a wildcard.
  * <li>{@code tags : *} is true if the array has elements, as AIP-160 specifies. The SQL uses CARDINALITY.
+ * <li>{@code "prod" in tags} in CEL is true if an element is equal to {@code prod}. The value has no wildcards.
+ * <li>{@code tags.startsWith("pr")} and {@code tags.endsWith("od")} in CEL are true if an element starts or ends
+ * with the value.
  * </ul>
  *
  * <p>
@@ -28,7 +31,8 @@ import java.util.Set;
  */
 public class RepeatedStringColumn extends SimpleColumn {
 
-  private static final Set<Operator> OPERATORS = Set.of(Operator.HAS, Operator.EQUALS);
+  private static final Set<Operator> OPERATORS = Set.of(Operator.HAS, Operator.EQUALS, Operator.STARTS_WITH, Operator.ENDS_WITH,
+      Operator.IN);
 
   public RepeatedStringColumn(String databaseName) {
     super(databaseName);
@@ -47,12 +51,15 @@ public class RepeatedStringColumn extends SimpleColumn {
   @Override
   public String restrictionQuery(RestrictionContext restriction, Generator generator) {
     String column = column(generator);
-    if (restriction.operator() == Operator.HAS && Args.isPresenceWildcard(restriction.arg())) {
+    if (restriction.operator() == Operator.HAS && Args.isPresenceWildcard(restriction.value())) {
       return "(CARDINALITY(" + column + ") > 0)";
     }
     String value = argument(restriction, Args::coerceToStringConstant);
-    String condition = restriction.operator() == Operator.HAS ? like(ELEMENT, containsPattern(value), generator)
-        : stringEquality(ELEMENT, Operator.EQUALS, value, generator);
+    String condition = switch (restriction.operator()) {
+      case EQUALS -> stringEquality(ELEMENT, Operator.EQUALS, value, Args.hasWildcards(restriction.value()), generator);
+      case IN -> stringEquality(ELEMENT, Operator.EQUALS, value, false, generator);
+      default -> like(ELEMENT, matchPattern(restriction.operator(), value), generator);
+    };
     return anyElement(column, condition);
   }
 

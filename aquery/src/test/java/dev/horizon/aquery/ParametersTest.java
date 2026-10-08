@@ -8,10 +8,11 @@ import dev.horizon.aquery.aip132.OrderBy;
 import dev.horizon.aquery.aip158.Keyset;
 import dev.horizon.aquery.aip160.DatabaseTable;
 import dev.horizon.aquery.aip160.Field;
-import dev.horizon.aquery.aip160.Filter;
+import dev.horizon.aquery.aip160.FilterParser;
 import dev.horizon.aquery.aip160.StringColumn;
 import dev.horizon.aquery.aip160.TimestampColumn;
 import dev.horizon.aquery.aip160.WhereClause;
+import dev.horizon.aquery.ebnf.EbnfFilterParser;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -23,6 +24,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class ParametersTest {
+
+  private static final FilterParser EBNF = new EbnfFilterParser();
 
   private final DatabaseTable table = new DatabaseTable(
       new Field.Builder("name").backend(new StringColumn("name")).filterable().build(),
@@ -90,7 +93,7 @@ class ParametersTest {
     Parameters parameters = new Parameters(ParameterStyle.DOLLAR);
     List<OrderBy> order = List.of(new OrderBy(new FieldPath("create_time"), true), new OrderBy(new FieldPath("id"), false));
 
-    String where = WhereClause.of(table, Filter.parse("name = \"dan\" OR name : \"eva\""), "T", parameters);
+    String where = WhereClause.of(table, EBNF.parse("name = \"dan\" OR name : \"eva\""), "T", parameters);
     String after = new Keyset(table, order).after(List.of("2012-04-21T15:30:00Z", "abc"), "T", parameters);
 
     OffsetDateTime created = OffsetDateTime.of(2012, 4, 21, 15, 30, 0, 0, ZoneOffset.UTC);
@@ -106,7 +109,7 @@ class ParametersTest {
     List<OrderBy> order = List.of(new OrderBy(new FieldPath("create_time"), false), new OrderBy(new FieldPath("id"), false));
 
     String statement = "SELECT T.id FROM things T WHERE "
-        + WhereClause.of(table, Filter.parse("name = \"dan\""), "T", parameters) + " AND "
+        + WhereClause.of(table, EBNF.parse("name = \"dan\""), "T", parameters) + " AND "
         + new Keyset(table, order).after(List.of("2012-04-21T15:30:00Z", "abc"), "T", parameters);
 
     assertThat(statement.chars().filter(character -> character == '?').count()).isEqualTo(parameters.size());

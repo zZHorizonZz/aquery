@@ -1,4 +1,4 @@
-package dev.horizon.aquery.internal.aip160;
+package dev.horizon.aquery.ebnf;
 
 import dev.horizon.aquery.aip160.Filter;
 import dev.horizon.aquery.aip160.InvalidFilterException;

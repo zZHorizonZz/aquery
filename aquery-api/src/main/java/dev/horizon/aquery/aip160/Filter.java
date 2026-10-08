@@ -2,101 +2,71 @@ package dev.horizon.aquery.aip160;
 
 import static java.util.stream.Collectors.joining;
 
-import dev.horizon.aquery.common.ServiceProvider;
+import dev.horizon.aquery.aip132.FieldPath;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Stream;
 
 /**
- * A parsed AIP-160 filter. The filter can be empty.
+ * A parsed filter. The filter can be empty.
  *
  * <p>
- * This type is the root of the filter AST. The AST follows the EBNF of
- * <a href="https://google.aip.dev/160">AIP-160</a>. The parser does not support the function call syntax.
+ * The filter is a tree of conditions. The tree does not depend on the language of the filter text. Each language
+ * has its own {@link FilterParser} in its own module, for example {@code aquery-grammar-ebnf} for AIP-160 text and
+ * {@code aquery-grammar-cel} for CEL text. All parsers give the same tree. Thus {@link WhereClause} and the backends compile
+ * all languages in the same way.
+ *
+ * <p>
+ * The tree has these nodes:
+ *
+ * <ul>
+ * <li>{@link And}: all operands must be true.
+ * <li>{@link Or}: one or more operands must be true.
+ * <li>{@link Not}: the operand must be false.
+ * <li>{@link Restriction}: a field, an operator and a value, for example {@code name = "dan"}.
+ * <li>{@link Global}: a value without a field, for example {@code prod}. All fields for implicit filters match it.
+ * </ul>
+ *
+ * <p>
+ * A {@link Value} keeps the form that the client wrote. The rules for literals are different in each language.
+ * For example, a word without quotes in AIP-160 can be a boolean, an integer, a duration or an enum value. The
+ * field type tells which. Thus the parser does not read the word. The backend of the field reads it with
+ * {@link Args}.
  *
  * <p>
  * An empty filter matches all rows. Blank text gives an empty filter. An empty filter compiles to {@code (1 = 1)}
- * and binds no values.
+ * and binds no values. The filter text can have at most {@code MAX_LENGTH} (16 KB) characters.
  *
  * <p>
- * The tree below this root follows the AIP-160 grammar. Each type is one level of the grammar. The shape of the
- * tree gives the operator precedence of the language:
- *
- * <ul>
- * <li>An {@link Expression} is a conjunction. The client writes {@code AND} between its sequences, or writes the
- * sequences one after the other.
- * <li>A {@link Sequence} is one or more factors, one after the other. With exact match semantics, a sequence has
- * the same meaning as AND.
- * <li>A {@link Factor} is a disjunction. The client writes {@code OR} between its terms.
- * <li>A {@link Term} is one {@link Simple}, with an optional negation. The client writes the negation as
- * {@code NOT} or {@code -}.
- * <li>A {@link Simple} is a {@link Restriction} or an expression in parentheses.
- * </ul>
- *
- * <p>
- * {@code OR} binds more tightly than a sequence. A sequence binds more tightly than {@code AND}. Thus
- * {@code a OR b c} is {@code (a OR b) AND c}, and {@code a b AND c} is {@code (a AND b) AND c}.
- *
- * <p>
- * The {@code AND}, {@code OR} and {@code NOT} keywords are case-sensitive. A word that contains a keyword, as in
- * {@code ORnotor}, is a usual value, not a keyword.
- *
- * <p>
- * The parser has two limits, as AIP-160 lets a service specify:
- *
- * <ul>
- * <li>The filter text can have at most {@code MAX_LENGTH} (16 KB) characters.
- * <li>Parentheses can have at most {@code MAX_DEPTH} (64) levels.
- * </ul>
- *
- * <p>
- * {@link #toString()} writes the tree in a stable form. Tests and error messages use it. It is not the text that
- * the client wrote.
+ * {@link #toString()} writes the tree in a stable form. Tests, error messages and page token fingerprints use
+ * it. It is not the text that the client wrote.
  *
  * @see <a href="https://chromium.googlesource.com/infra/luci/luci-go/+/main/common/data/aip160/filter_parser.go">LUCI aip160: filter_parser.go (Filter AST)</a>
  */
 public final class Filter {
 
   public static final int MAX_LENGTH = 16 * 1024;
-  public static final int MAX_DEPTH = 64;
 
-  private static final ServiceProvider<FilterParser> PARSER = new ServiceProvider<>(FilterParser.class);
+  private final Condition condition;
 
-  private final Expression expression;
-
-  public Filter(Expression expression) {
-    this.expression = expression;
+  public Filter(Condition condition) {
+    this.condition = condition;
   }
 
   /**
-   * Parses AIP-160 filter text into an AST.
+   * Gives the condition of the filter.
    *
-   * <p>
-   * The parser comes from the module path or the class path at runtime. The internal module supplies it.
-   *
-   * @param filter the text that the client wrote. Null or blank text means no filter
-   * @return the parsed filter
-   * @throws InvalidFilterException if the parser cannot read the text, or if the text is longer than {@code MAX_LENGTH}
+   * @return the root of the tree, or null if the filter is empty
    */
-  public static Filter parse(String filter) {
-    if (filter != null && filter.length() > MAX_LENGTH) {
-      throw new InvalidFilterException("the filter is too long: %d characters, at most %d", filter.length(), MAX_LENGTH);
-    }
-    return PARSER.get().parse(filter);
-  }
-
-  /**
-   * Gives the expression of the filter.
-   *
-   * @return the expression, or null if the filter is empty
-   */
-  public Expression expression() {
-    return expression;
+  public Condition condition() {
+    return condition;
   }
 
   @Override
   public String toString() {
-    return "filter{" + (expression == null ? "" : expression) + "}";
+    return "filter{" + (condition == null ? "" : condition) + "}";
   }
 
   /**
@@ -131,212 +101,235 @@ public final class Filter {
     return parts.stream().map(String::valueOf).collect(joining(",", prefix + "{", "}"));
   }
 
-  private static String present(String prefix, Object first, Object second) {
-    return Stream.of(first, second).filter(Objects::nonNull).map(String::valueOf).collect(joining(",", prefix + "{", "}"));
+  private static List<Condition> nonEmpty(String node, List<Condition> operands) {
+    if (operands.isEmpty()) {
+      throw new IllegalArgumentException("a condition '" + node + "' needs one or more operands");
+    }
+    return List.copyOf(operands);
+  }
+
+  /** A node of the filter tree. */
+  public sealed interface Condition permits And, Or, Not, Restriction, Global {
   }
 
   /**
-   * An expression: a conjunction (AND) of sequences, or one sequence.
+   * A conjunction: all operands must be true.
    *
    * <p>
-   * The AND is case-sensitive.
-   *
-   * <p>
-   * Example: {@code a b AND c AND d}. The expression {@code (a b) AND c AND d} has the same meaning.
+   * AIP-160 writes it as {@code a AND b} or as a sequence {@code a b}. CEL writes it as {@code a && b}. The list
+   * must have one or more operands.
    */
-  public record Expression(List<Sequence> sequences) {
+  public record And(List<Condition> operands) implements Condition {
 
-    public Expression {
-      sequences = List.copyOf(sequences);
+    public And {
+      operands = nonEmpty("and", operands);
     }
 
     @Override
     public String toString() {
-      return joined("expression", sequences);
+      return joined("and", operands);
     }
   }
 
   /**
-   * A sequence: one or more factors with whitespace between them.
+   * A disjunction: one or more operands must be true.
    *
    * <p>
-   * With exact match semantics, a sequence has the same meaning as AND. Fuzzy match semantics are different.
-   *
-   * <p>
-   * Example: {@code New York Giants OR Yankees}. The expression {@code New York (Giants OR Yankees)} has the same
-   * meaning.
+   * AIP-160 writes it as {@code a OR b}. CEL writes it as {@code a || b}. The list must have one or more operands.
    */
-  public record Sequence(List<Factor> factors) {
+  public record Or(List<Condition> operands) implements Condition {
 
-    public Sequence {
-      factors = List.copyOf(factors);
+    public Or {
+      operands = nonEmpty("or", operands);
     }
 
     @Override
     public String toString() {
-      return joined("sequence", factors);
+      return joined("or", operands);
     }
   }
 
   /**
-   * A factor: a disjunction (OR) of terms, or one term.
+   * A negation: the operand must be false.
    *
    * <p>
-   * The OR is case-sensitive.
-   *
-   * <p>
-   * Example: {@code a < 10 OR a >= 100}
+   * AIP-160 writes it as {@code NOT a} or {@code -a}. CEL writes it as {@code !a}.
    */
-  public record Factor(List<Term> terms) {
-
-    public Factor {
-      terms = List.copyOf(terms);
-    }
+  public record Not(Condition operand) implements Condition {
 
     @Override
     public String toString() {
-      return joined("factor", terms);
+      return "not{" + operand + "}";
     }
   }
 
   /**
-   * A term: a simple expression with an optional negation.
+   * A restriction: a field, an operator and a value.
    *
    * <p>
-   * The negation is {@code -} or {@code NOT}. The two forms have the same meaning. The {@code NOT} is
-   * case-sensitive, and whitespace must follow it.
-   */
-  public record Term(boolean negated, Simple simple) {
-
-    @Override
-    public String toString() {
-      return "term{" + (negated ? "-" : "") + simple + "}";
-    }
-  }
-
-  /**
-   * A simple expression: a restriction or an expression in parentheses (a composite).
-   *
-   * <p>
-   * Example of a composite: {@code (a OR b) AND c < 10}
-   */
-  public record Simple(Restriction restriction, Expression composite) {
-
-    @Override
-    public String toString() {
-      return present("simple", restriction, composite);
-    }
-  }
-
-  /**
-   * A restriction: a comparable, an optional operator and an optional argument.
-   *
-   * <p>
-   * A restriction with only a comparable is a global restriction. The generator matches the value of a global
-   * restriction with all fields for implicit filters.
+   * The path can name more than the field, as in {@code labels.site = "pilsen"}. The table finds the field from
+   * the start of the path. The backend of the field reads the other segments.
    *
    * <p>
    * Examples:
    *
    * <ul>
-   * <li>equality: {@code package=com.google}
-   * <li>inequality: {@code msg != "hello"}
-   * <li>greater than: {@code 1 > 0}
-   * <li>has: {@code map:key}
-   * <li>global: {@code prod}
+   * <li>equality: {@code package = "com.google"} in AIP-160, {@code package == "com.google"} in CEL
+   * <li>has: {@code labels:site} in AIP-160, {@code "site" in labels} in CEL
+   * <li>prefix: {@code name.startsWith("da")} in CEL
    * </ul>
    */
-  public record Restriction(Comparable comparable, Operator operator, Arg arg) {
+  public record Restriction(FieldPath fieldPath, Operator operator, Value value) implements Condition {
 
     @Override
     public String toString() {
-      String written = comparable == null ? "" : String.valueOf(comparable);
-      if (operator != null) {
-        written += (written.isEmpty() ? "" : ",") + quote(operator.symbol());
-      }
-      if (arg != null) {
-        written += (written.isEmpty() ? "" : ",") + arg;
-      }
-      return "restriction{" + written + "}";
+      return "restriction{" + quote(fieldPath.toString()) + "," + quote(operator.symbol()) + "," + value + "}";
     }
   }
 
   /**
-   * An argument: a comparable, or an expression in parentheses (a composite).
+   * A value without a field, for example {@code prod}.
    *
    * <p>
-   * Most backends refuse composite arguments. The message names the field of the argument.
+   * The generator matches the value with all fields for implicit filters. Only AIP-160 has this condition.
    */
-  public record Arg(Comparable comparable, Expression composite) {
+  public record Global(String value) implements Condition {
 
     @Override
     public String toString() {
-      return present("arg", comparable, composite);
+      return "global{" + quote(value) + "}";
     }
   }
 
   /**
-   * A comparable. The parser does not support functions. Thus a comparable is always a member.
-   */
-  public record Comparable(Member member) {
-
-    @Override
-    public String toString() {
-      return "comparable{" + member + "}";
-    }
-  }
-
-  /**
-   * A member: a value and the field references after it, with dots between them. An example is
-   * {@code expr.type_map.1.type}.
+   * The value of a restriction, in the form that the client wrote.
    *
    * <p>
-   * The value names a field. The references go into that field. The schema tells which fields accept this.
+   * AIP-160 has only two forms: {@link Text} without quotes and {@link StringLiteral} in quotes. CEL has typed
+   * literals. A CEL identifier, as in {@code status == ACTIVE}, is {@link Text}.
    */
-  public record Member(Value value, List<Value> fields) {
-
-    public Member {
-      fields = List.copyOf(fields);
-    }
+  public sealed interface Value permits Text, StringLiteral, BoolLiteral, IntLiteral, DoubleLiteral, DurationLiteral,
+      TimestampLiteral {
 
     /**
-     * Gives the input text of the member, for error messages.
+     * Gives the value as the client wrote it, for error messages.
      *
-     * @return the value and the fields with a dot between them. A quoted value is in quotes
+     * @return the text of the value
      */
+    String input();
+  }
+
+  /**
+   * A word without quotes, for example {@code true}, {@code -30}, {@code 1.5s}, {@code ACTIVE} or {@code *}.
+   *
+   * <p>
+   * The text can have dots, as in {@code 2.5} or {@code a.b}. A word with dots can be a reference to a field.
+   */
+  public record Text(String text) implements Value {
+
+    @Override
     public String input() {
-      return Stream.concat(Stream.of(value), fields.stream()).filter(Objects::nonNull).map(Value::input).collect(joining("."));
+      return text;
     }
 
     @Override
     public String toString() {
-      return "member{" + value + (fields.isEmpty() ? "" : joined(", ", fields)) + "}";
+      return "text{" + quote(text) + "}";
     }
   }
 
   /**
-   * A value: TEXT or STRING.
+   * A string in quotes, without the quotes and with the escapes applied.
    *
    * <p>
-   * The literal rules of AIP-160 depend on this difference. Strings are in double quotes. Booleans, integers,
-   * durations and enum values have no quotes. A string backend refuses a value without quotes, because the value
-   * can be a field reference. A boolean backend refuses a value in quotes, because {@code "true"} is a string, not
-   * a boolean.
+   * In AIP-160, a {@code *} at the start or at the end of a string in an equality is a wildcard. Then
+   * {@code wildcards} is true. In CEL, a {@code *} is a usual character, and {@code wildcards} is false.
    */
-  public record Value(boolean quoted, String value) {
+  public record StringLiteral(String value, boolean wildcards) implements Value {
 
-    /**
-     * Gives the input text of the value, for error messages.
-     *
-     * @return the value, in quotes if the client quoted it
-     */
+    @Override
     public String input() {
-      return quoted ? quote(value) : value;
+      return quote(value);
     }
 
     @Override
     public String toString() {
-      return "value{" + (quoted ? "quoted," : "") + quote(value) + "}";
+      return "string{" + (wildcards ? "wildcards," : "") + quote(value) + "}";
+    }
+  }
+
+  /** A boolean literal of CEL: {@code true} or {@code false}. */
+  public record BoolLiteral(boolean value) implements Value {
+
+    @Override
+    public String input() {
+      return Boolean.toString(value);
+    }
+
+    @Override
+    public String toString() {
+      return "bool{" + value + "}";
+    }
+  }
+
+  /** An integer literal of CEL, for example {@code 42} or {@code -30}. */
+  public record IntLiteral(long value) implements Value {
+
+    @Override
+    public String input() {
+      return Long.toString(value);
+    }
+
+    @Override
+    public String toString() {
+      return "int{" + value + "}";
+    }
+  }
+
+  /** A floating-point literal of CEL, for example {@code 2.5}. */
+  public record DoubleLiteral(double value) implements Value {
+
+    @Override
+    public String input() {
+      return Double.toString(value);
+    }
+
+    @Override
+    public String toString() {
+      return "double{" + value + "}";
+    }
+  }
+
+  /** A duration of CEL, for example {@code duration("1.5s")}. */
+  public record DurationLiteral(Duration value) implements Value {
+
+    @Override
+    public String input() {
+      return "duration(" + quote(seconds()) + ")";
+    }
+
+    @Override
+    public String toString() {
+      return "duration{" + seconds() + "}";
+    }
+
+    private String seconds() {
+      BigDecimal seconds = BigDecimal.valueOf(value.getSeconds()).add(BigDecimal.valueOf(value.getNano(), 9));
+      return seconds.stripTrailingZeros().toPlainString() + "s";
+    }
+  }
+
+  /** A timestamp of CEL, for example {@code timestamp("2012-04-21T11:30:00-04:00")}. */
+  public record TimestampLiteral(OffsetDateTime value) implements Value {
+
+    @Override
+    public String input() {
+      return "timestamp(" + quote(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(value)) + ")";
+    }
+
+    @Override
+    public String toString() {
+      return "timestamp{" + DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(value) + "}";
     }
   }
 }

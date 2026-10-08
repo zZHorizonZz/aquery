@@ -8,33 +8,35 @@
     <version>0.1.0</version>
   </parent>
 
-  <artifactId>aquery</artifactId>
-  <name>aQuery - Core</name>
+  <artifactId>aquery-grammar-cel</artifactId>
+  <name>aQuery - Grammar CEL</name>
 
   <dependencies>
     <dependency>
       <groupId>dev.horizon</groupId>
       <artifactId>aquery-api</artifactId>
       <version>${project.version}</version>
-      <scope>compile</scope>
-      <optional>false</optional>
     </dependency>
     <dependency>
-      <groupId>dev.horizon</groupId>
-      <artifactId>aquery-internal</artifactId>
-      <version>${project.version}</version>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>dev.horizon</groupId>
-      <artifactId>aquery-grammar-ebnf</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>dev.horizon</groupId>
-      <artifactId>aquery-grammar-cel</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
+      <groupId>dev.cel</groupId>
+      <artifactId>compiler</artifactId>
+      <version>${cel.version}</version>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Automatic-Module-Name>dev.horizon.aquery.cel</Automatic-Module-Name>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>
