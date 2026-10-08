@@ -6,7 +6,4 @@ module dev.horizon.aquery.internal {
 
   provides dev.horizon.aquery.aip157.ReadMaskParser with
       dev.horizon.aquery.internal.aip157.InternalReadMaskParser;
-
-  provides dev.horizon.aquery.aip160.FilterParser with
-      dev.horizon.aquery.internal.aip160.InternalFilterParser;
 }

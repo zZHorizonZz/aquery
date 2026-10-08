@@ -2,8 +2,14 @@ package dev.horizon.aquery.aip160;
 
 import static java.util.stream.Collectors.joining;
 
-import dev.horizon.aquery.aip160.Filter.Arg;
-import dev.horizon.aquery.aip160.Filter.Member;
+import dev.horizon.aquery.aip160.Filter.BoolLiteral;
+import dev.horizon.aquery.aip160.Filter.DoubleLiteral;
+import dev.horizon.aquery.aip160.Filter.DurationLiteral;
+import dev.horizon.aquery.aip160.Filter.IntLiteral;
+import dev.horizon.aquery.aip160.Filter.StringLiteral;
+import dev.horizon.aquery.aip160.Filter.Text;
+import dev.horizon.aquery.aip160.Filter.TimestampLiteral;
+import dev.horizon.aquery.aip160.Filter.Value;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
@@ -14,7 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Reads the literal that a client wrote, and gives the value that a backend keeps.
+ * Reads the value that a client wrote, and gives the value that a backend keeps.
  *
  * <p>
  * AIP-160 specifies how to write literals. The rules depend on the quotes:
@@ -28,6 +34,11 @@ import java.util.regex.Pattern;
  * <li>A duration is a number with an {@code s} suffix, for example {@code 1.5s}.
  * <li>A timestamp is an RFC 3339 string in double quotes, for example {@code "2012-04-21T11:30:00-04:00"}.
  * </ul>
+ *
+ * <p>
+ * CEL has typed literals. Each reader also accepts the CEL literal of its type: {@code true}, {@code 42},
+ * {@code duration("1.5s")} and {@code timestamp("2012-04-21T11:30:00-04:00")}. An enum value is a CEL identifier
+ * without quotes, as in AIP-160.
  *
  * <p>
  * Each reader gives the value in the type that the backend keeps. The backend then binds the value in the type
@@ -48,153 +59,189 @@ public final class Args {
   }
 
   /**
-   * Reads the argument as a string constant in double quotes.
+   * Reads the value as a string constant in double quotes.
    *
-   * @param arg the argument of the restriction
+   * @param value the value of the restriction
    * @return the string without the quotes and with the escapes applied
-   * @throws InvalidFilterException if the client did not write a string in quotes, or if the value has a dot outside the quotes
+   * @throws InvalidFilterException if the client did not write a string in quotes
    */
-  public static String coerceToStringConstant(Arg arg) {
-    Member member = memberOf(arg);
-    if (!member.value().quoted()) {
-      throw new InvalidFilterException(
+  public static String coerceToStringConstant(Value value) {
+    return switch (value) {
+      case StringLiteral string -> string.value();
+      case Text text -> throw new InvalidFilterException(
           "expected a quoted (\") string literal but got possible field reference '%s'; did you mean to wrap the value in quotes?",
-          member.input());
-    }
-    requireNoNavigation(member);
-    return member.value().value();
-  }
-
-  /**
-   * Reads the argument as the word {@code true} or {@code false} without quotes.
-   *
-   * <p>
-   * The words are case-sensitive. The reader refuses a {@code "true"} in quotes, because it is a string.
-   *
-   * @param arg the argument of the restriction
-   * @return the boolean value of the word
-   * @throws InvalidFilterException if the client wrote a different value
-   */
-  public static boolean coerceToBoolConstant(Arg arg) {
-    Member member = unquotedMemberOf(arg, "the unquoted literal 'true' or 'false'");
-    requireNoNavigation(member);
-    // The literals are case-sensitive.
-    return switch (member.value().value()) {
-      case "true" -> true;
-      case "false" -> false;
-      default ->
-        throw new InvalidFilterException("expected the unquoted literal 'true' or 'false' (case-sensitive) but found '%s'",
-            member.value().value());
+          text.text());
+      default -> throw unexpected("a quoted (\") string literal", value);
     };
   }
 
   /**
-   * Reads the argument as an integer without quotes. The integer can have a minus sign.
+   * Tells if a {@code *} at the start or at the end of the string value is a wildcard.
    *
-   * @param arg the argument of the restriction
-   * @return the integer
-   * @throws InvalidFilterException if the client did not write an integer, or if the integer does not fit in 64 bits
+   * <p>
+   * AIP-160 strings have wildcards in an equality. CEL strings do not have wildcards.
+   *
+   * @param value the value of the restriction
+   * @return true if the value is a string with wildcards
    */
-  public static long coerceToIntegerConstant(Arg arg) {
-    Member member = unquotedMemberOf(arg, "an unquoted integer literal");
-    // A float such as 2.5 or 2.997e9 comes as a member with a dot.
-    if (!member.fields().isEmpty()) {
-      throw new InvalidFilterException("expected an integer literal but found '%s'", member.input());
-    }
-    try {
-      return Long.parseLong(member.value().value());
-    } catch (NumberFormatException malformed) {
-      throw new InvalidFilterException("expected an integer literal but found '%s'", member.value().value());
-    }
+  public static boolean hasWildcards(Value value) {
+    return value instanceof StringLiteral string && string.wildcards();
   }
 
   /**
-   * Reads the argument as an RFC 3339 timestamp in double quotes, for example {@code "2012-04-21T11:30:00-04:00"}.
+   * Reads the value as the word {@code true} or {@code false} without quotes.
+   *
+   * <p>
+   * The words are case-sensitive. The reader refuses a {@code "true"} in quotes, because it is a string.
+   *
+   * @param value the value of the restriction
+   * @return the boolean value
+   * @throws InvalidFilterException if the client wrote a different value
+   */
+  public static boolean coerceToBoolConstant(Value value) {
+    return switch (value) {
+      case BoolLiteral bool -> bool.value();
+      // The literals are case-sensitive.
+      case Text text when text.text().equals("true") -> true;
+      case Text text when text.text().equals("false") -> false;
+      case Text text ->
+        throw new InvalidFilterException("expected the unquoted literal 'true' or 'false' (case-sensitive) but found '%s'",
+            text.text());
+      default -> throw unexpected("the unquoted literal 'true' or 'false'", value);
+    };
+  }
+
+  /**
+   * Reads the value as an integer without quotes. The integer can have a minus sign.
+   *
+   * @param value the value of the restriction
+   * @return the integer
+   * @throws InvalidFilterException if the client did not write an integer, or if the integer does not fit in 64 bits
+   */
+  public static long coerceToIntegerConstant(Value value) {
+    return switch (value) {
+      case IntLiteral integer -> integer.value();
+      case Text text -> {
+        try {
+          yield Long.parseLong(text.text());
+        } catch (NumberFormatException malformed) {
+          // A float such as 2.5 or 2.997e9 is not an integer.
+          throw new InvalidFilterException("expected an integer literal but found '%s'", text.text());
+        }
+      }
+      case DoubleLiteral number ->
+        throw new InvalidFilterException("expected an integer literal but found '%s'", number.input());
+      default -> throw unexpected("an unquoted integer literal", value);
+    };
+  }
+
+  /**
+   * Reads the value as an RFC 3339 timestamp, for example {@code "2012-04-21T11:30:00-04:00"}.
+   *
+   * <p>
+   * In AIP-160, the timestamp is a string in double quotes. In CEL, it is a {@code timestamp("...")} or a string.
+   * {@link #parseTimestamp} gives the rules for the text.
+   *
+   * @param value the value of the restriction
+   * @return the timestamp with its UTC offset
+   * @throws InvalidFilterException if the client did not write an RFC 3339 timestamp
+   */
+  public static OffsetDateTime coerceToTimestampConstant(Value value) {
+    return switch (value) {
+      case TimestampLiteral timestamp -> timestamp.value();
+      case StringLiteral string -> parseTimestamp(string.value());
+      case Text text -> throw new InvalidFilterException(
+          "expected a quoted RFC 3339 timestamp like \"2012-04-21T11:30:00-04:00\" but got possible field reference '%s'; did you mean to wrap the value in quotes?",
+          text.text());
+      default -> throw unexpected("an RFC 3339 timestamp", value);
+    };
+  }
+
+  /**
+   * Reads an RFC 3339 timestamp, for example {@code 2012-04-21T11:30:00-04:00}.
    *
    * <p>
    * The timestamp must have seconds and a UTC offset or {@code Z}. The {@code T} and the {@code Z} can be lowercase,
    * as RFC 3339 permits. The fraction of a second can have at most nine digits.
    *
-   * @param arg the argument of the restriction
+   * @param text the text of the timestamp, without quotes
    * @return the timestamp with its UTC offset
-   * @throws InvalidFilterException if the client did not write an RFC 3339 timestamp
+   * @throws InvalidFilterException if the text is not an RFC 3339 timestamp
    */
-  public static OffsetDateTime coerceToTimestampConstant(Arg arg) {
-    Member member = memberOf(arg);
-    if (!member.value().quoted()) {
-      throw new InvalidFilterException(
-          "expected a quoted RFC 3339 timestamp like \"2012-04-21T11:30:00-04:00\" but got possible field reference '%s'; did you mean to wrap the value in quotes?",
-          member.input());
-    }
-    requireNoNavigation(member);
-    String value = member.value().value();
+  public static OffsetDateTime parseTimestamp(String text) {
     try {
-      if (TIMESTAMP.matcher(value).matches()) {
-        return OffsetDateTime.parse(value.toUpperCase(Locale.ROOT));
+      if (TIMESTAMP.matcher(text).matches()) {
+        return OffsetDateTime.parse(text.toUpperCase(Locale.ROOT));
       }
     } catch (DateTimeParseException outOfRange) {
       // A month 13 or an offset of 25 hours has the correct form. It is still not a timestamp.
     }
     throw new InvalidFilterException("'%s' is not a valid RFC 3339 timestamp, expected e.g. \"2012-04-21T11:30:00-04:00\"",
-        value);
+        text);
   }
 
   /**
-   * Reads the argument as a duration without quotes: a number with an {@code s} suffix, for example {@code 1.5s}.
+   * Reads the value as a duration.
    *
    * <p>
-   * The duration is exact to the nanosecond. The number of nanoseconds must fit in 64 bits.
+   * In AIP-160, the duration is a number with an {@code s} suffix and without quotes, for example {@code 1.5s}. In
+   * CEL, it is a {@code duration("1.5s")}. The duration is exact to the nanosecond. The number of nanoseconds must
+   * fit in 64 bits.
    *
-   * @param arg the argument of the restriction
+   * @param value the value of the restriction
    * @return the duration
    * @throws InvalidFilterException if the client did not write a duration, or if the duration is too long
    */
-  public static Duration coerceToDurationConstant(Arg arg) {
-    Member member = memberOf(arg);
-    if (member.value().quoted()) {
-      throw new InvalidFilterException(
-          "durations must be an unquoted number with 's' suffix like 1.2s but got a quoted string '%s'",
-          member.value().value());
-    }
-    // The lexer reads 1.5s as the member 1 with the field 5s.
-    String input = member.value().value();
-    if (!member.fields().isEmpty()) {
-      if (member.fields().size() > 1 || member.fields().getFirst().quoted()) {
-        throw new InvalidFilterException("expected a duration like 1.2s, but got '%s'", member.input());
+  public static Duration coerceToDurationConstant(Value value) {
+    return switch (value) {
+      case DurationLiteral duration -> {
+        try {
+          duration.value().toNanos();
+        } catch (ArithmeticException tooLong) {
+          throw tooLongDuration(duration.input());
+        }
+        yield duration.value();
       }
-      input += "." + member.fields().getFirst().value();
-    }
-    return parseDuration(input);
+      case Text text -> parseDuration(text.text());
+      case StringLiteral string -> throw new InvalidFilterException(
+          "durations must be an unquoted number with 's' suffix like 1.2s, or duration(\"1.2s\") in CEL, but got a quoted string '%s'",
+          string.value());
+      default -> throw unexpected("a duration like 1.2s", value);
+    };
   }
 
   /**
-   * Reads the argument as the name of a key: a string in quotes or a word without quotes.
+   * Reads the value as the name of a key: a string in quotes or a word without quotes.
    *
    * <p>
    * The has operator uses a key, as in {@code labels:site}.
    *
-   * @param arg the argument of the restriction
+   * @param value the value of the restriction
    * @return the name of the key
-   * @throws InvalidFilterException if the value has a dot outside the quotes
+   * @throws InvalidFilterException if the word has a dot, or if the value is not a string or a word
    */
-  public static String coerceToKeyConstant(Arg arg) {
-    Member member = memberOf(arg);
-    requireNoNavigation(member);
-    return member.value().value();
+  public static String coerceToKeyConstant(Value value) {
+    return switch (value) {
+      case StringLiteral string -> string.value();
+      case Text text -> {
+        requireNoNavigation(text);
+        yield text.text();
+      }
+      default -> throw unexpected("a key", value);
+    };
   }
 
   /**
-   * Tells if the argument is the presence wildcard: a {@code *} without quotes, as in {@code tags:*}.
+   * Tells if the value is the presence wildcard: a {@code *} without quotes, as in {@code tags:*}.
    *
-   * @param arg the argument of the restriction
-   * @return true if the argument is the presence wildcard
+   * <p>
+   * The CEL parser gives {@code has(labels.site)} as {@code labels.site:*}.
+   *
+   * @param value the value of the restriction
+   * @return true if the value is the presence wildcard
    */
-  public static boolean isPresenceWildcard(Arg arg) {
-    if (arg.composite() != null || arg.comparable() == null || arg.comparable().member() == null) {
-      return false;
-    }
-    Member member = arg.comparable().member();
-    return !member.value().quoted() && member.fields().isEmpty() && member.value().value().equals("*");
+  public static boolean isPresenceWildcard(Value value) {
+    return value instanceof Text text && text.text().equals("*");
   }
 
   /**
@@ -245,27 +292,29 @@ public final class Args {
   }
 
   /**
-   * Reads the argument as the name of an enum value without quotes.
+   * Reads the value as the name of an enum value without quotes.
    *
-   * @param arg the argument of the restriction
+   * @param value the value of the restriction
    * @param definition the definition of the enum
    * @return the number of the enum value
    * @throws InvalidFilterException if the client wrote a string in quotes, an unknown name or a disallowed name
    */
-  public static int coerceToEnumConstant(Arg arg, EnumDefinition definition) {
-    Member member = unquotedMemberOf(arg, "an unquoted enum value");
-    requireNoNavigation(member);
-    String name = member.value().value();
-    Integer value = definition.values.get(name);
-    if (value == null) {
+  public static int coerceToEnumConstant(Value value, EnumDefinition definition) {
+    if (!(value instanceof Text text)) {
+      throw unexpected("an unquoted enum value", value);
+    }
+    requireNoNavigation(text);
+    String name = text.text();
+    Integer number = definition.values.get(name);
+    if (number == null) {
       throw new InvalidFilterException("'%s' is not one of the valid %s values, expected one of [%s]", name,
           definition.typeName, definition.allowedValues);
     }
-    if (definition.disallowedValues.contains(value)) {
+    if (definition.disallowedValues.contains(number)) {
       throw new InvalidFilterException("'%s' is not allowed for this %s, expected one of [%s]", name, definition.typeName,
           definition.allowedValues);
     }
-    return value;
+    return number;
   }
 
   private static Duration parseDuration(String value) {
@@ -281,32 +330,25 @@ public final class Args {
       // The column keeps nanoseconds in a 64-bit integer. Thus the full duration must fit in 64 bits.
       return Duration.ofNanos(Math.addExact(Math.multiplyExact(seconds, NANOS_PER_SECOND), nanos));
     } catch (NumberFormatException | ArithmeticException tooLong) {
-      throw new InvalidFilterException("'%s' is too long a duration, at most %d.%09ds", value,
-          Long.MAX_VALUE / NANOS_PER_SECOND, Long.MAX_VALUE % NANOS_PER_SECOND);
+      throw tooLongDuration(value);
     }
   }
 
-  private static Member unquotedMemberOf(Arg arg, String expected) {
-    Member member = memberOf(arg);
-    if (member.value().quoted()) {
-      throw new InvalidFilterException("expected %s but found double-quoted string '%s'", expected, member.value().value());
-    }
-    return member;
+  private static InvalidFilterException tooLongDuration(String value) {
+    return new InvalidFilterException("'%s' is too long a duration, at most %d.%09ds", value, Long.MAX_VALUE / NANOS_PER_SECOND,
+        Long.MAX_VALUE % NANOS_PER_SECOND);
   }
 
-  private static void requireNoNavigation(Member member) {
-    if (!member.fields().isEmpty()) {
+  private static InvalidFilterException unexpected(String expected, Value value) {
+    if (value instanceof StringLiteral string) {
+      return new InvalidFilterException("expected %s but found double-quoted string '%s'", expected, string.value());
+    }
+    return new InvalidFilterException("expected %s but found '%s'", expected, value.input());
+  }
+
+  private static void requireNoNavigation(Text text) {
+    if (text.text().indexOf('.') >= 0) {
       throw new InvalidFilterException("field navigation (using '.') is not supported");
     }
-  }
-
-  private static Member memberOf(Arg arg) {
-    if (arg.composite() != null) {
-      throw new InvalidFilterException("composite expressions in arguments not supported yet");
-    }
-    if (arg.comparable() == null || arg.comparable().member() == null) {
-      throw new InvalidFilterException("missing comparable in argument");
-    }
-    return arg.comparable().member();
   }
 }

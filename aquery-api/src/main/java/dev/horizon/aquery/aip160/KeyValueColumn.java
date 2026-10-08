@@ -34,6 +34,12 @@ import java.util.Set;
  * </ul>
  *
  * <p>
+ * CEL writes these restrictions in a different form. {@code "site" in labels} and {@code has(labels.site)} are
+ * true if the field has the key {@code site}. {@code labels.site == "pilsen"} and {@code labels["site"] == "pilsen"}
+ * compare the value of the key, without wildcards. {@code labels.site.startsWith("pil")} and
+ * {@code labels.site.endsWith("sen")} match a prefix and a suffix of the value.
+ *
+ * <p>
  * The key comes from the client. Thus the SQL contains the key only in a bound value. The SQL also escapes the LIKE
  * wildcards of the key. Each restriction binds strings only.
  *
@@ -92,7 +98,9 @@ public class KeyValueColumn extends SimpleColumn {
     }
   }
 
-  private static final Set<Operator> OPERATORS = Set.of(Operator.HAS, Operator.EQUALS, Operator.NOT_EQUALS);
+  private static final Set<Operator> OPERATORS = Set.of(Operator.HAS, Operator.EQUALS, Operator.NOT_EQUALS,
+      Operator.STARTS_WITH,
+      Operator.ENDS_WITH, Operator.IN);
 
   private static final String CHILD = "aquery_kv";
 
@@ -179,25 +187,34 @@ public class KeyValueColumn extends SimpleColumn {
       throw new InvalidFilterException("expected only a single '.' after key-value column named '%s'", restriction.fieldPath());
     }
 
+    if (restriction.operator() == Operator.IN) {
+      throw new InvalidFilterException("the operator 'in' needs the key-value field itself, as in '\"key\" in %s'",
+          restriction.fieldPath());
+    }
     String keyUnsafe = key(restriction, restriction.nestedFields().getFirst());
-    if (restriction.operator() == Operator.HAS && Args.isPresenceWildcard(restriction.arg())) {
+    if (restriction.operator() == Operator.HAS && Args.isPresenceWildcard(restriction.value())) {
       return keyPresence(keyUnsafe, generator);
     }
-    // The argument is text from the client. The SQL contains it only in bound values.
+    // The value is text from the client. The SQL contains it only in bound values.
     String valueUnsafe = argument(restriction, Args::coerceToStringConstant);
+    boolean wildcards = Args.hasWildcards(restriction.value());
     return switch (representation) {
-      case STRING_ARRAY -> stringArrayQuery(restriction.operator(), column(generator), keyUnsafe, valueUnsafe, generator);
-      case CHILD_TABLE -> childTableQuery(restriction.operator(), keyUnsafe, valueUnsafe, generator);
+      case STRING_ARRAY ->
+        stringArrayQuery(restriction.operator(), column(generator), keyUnsafe, valueUnsafe, wildcards, generator);
+      case CHILD_TABLE -> childTableQuery(restriction.operator(), keyUnsafe, valueUnsafe, wildcards, generator);
     };
   }
 
   private String fieldQuery(RestrictionContext restriction, Generator generator) {
+    if (restriction.operator() == Operator.IN) {
+      return keyPresence(key(restriction, argument(restriction, Args::coerceToKeyConstant)), generator);
+    }
     if (restriction.operator() != Operator.HAS) {
       String written = restriction.fieldPath() + restriction.operator().symbol();
       throw new InvalidFilterException("key value columns must specify the key to search on. Instead of '%s' try '%s'", written,
           restriction.fieldPath() + ".key" + restriction.operator().symbol());
     }
-    if (Args.isPresenceWildcard(restriction.arg())) {
+    if (Args.isPresenceWildcard(restriction.value())) {
       return switch (representation) {
         case STRING_ARRAY -> "(CARDINALITY(" + column(generator) + ") > 0)";
         case CHILD_TABLE -> childRows(generator, "");
@@ -223,11 +240,12 @@ public class KeyValueColumn extends SimpleColumn {
   }
 
   private static String stringArrayQuery(Operator operator, String column, String keyUnsafe, String valueUnsafe,
-      Generator generator) {
+      boolean wildcards, Generator generator) {
     String keyPattern = quoteLike(keyUnsafe) + ":";
-    String wildcard = wildcardPattern(valueUnsafe);
+    String wildcard = wildcards ? wildcardPattern(valueUnsafe) : null;
     return switch (operator) {
-      case HAS -> anyElement(column, like(ELEMENT, keyPattern + containsPattern(valueUnsafe), generator));
+      case HAS, STARTS_WITH, ENDS_WITH ->
+        anyElement(column, like(ELEMENT, keyPattern + matchPattern(operator, valueUnsafe), generator));
       case EQUALS -> anyElement(column, wildcard == null ? ELEMENT + " = " + generator.bind(keyUnsafe + ":" + valueUnsafe)
           : like(ELEMENT, keyPattern + wildcard, generator));
       case NOT_EQUALS -> {
@@ -240,11 +258,14 @@ public class KeyValueColumn extends SimpleColumn {
     };
   }
 
-  private String childTableQuery(Operator operator, String keyUnsafe, String valueUnsafe, Generator generator) {
+  private String childTableQuery(Operator operator, String keyUnsafe, String valueUnsafe, boolean wildcards,
+      Generator generator) {
     String key = " AND " + childColumn(childTable.keyColumn()) + " = " + generator.bind(keyUnsafe);
     String value = childColumn(childTable.valueColumn());
-    String compared = operator == Operator.HAS ? like(value, containsPattern(valueUnsafe), generator)
-        : stringEquality(value, operator, valueUnsafe, generator);
+    String compared = switch (operator) {
+      case EQUALS, NOT_EQUALS -> stringEquality(value, operator, valueUnsafe, wildcards, generator);
+      default -> like(value, matchPattern(operator, valueUnsafe), generator);
+    };
     return childRows(generator, key + " AND " + compared);
   }
 

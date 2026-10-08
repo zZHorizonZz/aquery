@@ -8,6 +8,7 @@ import dev.horizon.aquery.InvalidQueryException;
 import dev.horizon.aquery.ParameterStyle;
 import dev.horizon.aquery.Parameters;
 import dev.horizon.aquery.aip160.KeyValueColumn.Representation;
+import dev.horizon.aquery.ebnf.EbnfFilterParser;
 import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class WhereClauseTest {
+
+  private static final FilterParser EBNF = new EbnfFilterParser();
 
   private final DatabaseTable table = new DatabaseTable(
       new Field.Builder("foo").backend(new StringColumn("db_foo")).filterableImplicitly().build(),
@@ -33,7 +36,7 @@ class WhereClauseTest {
   void emptyFilter() {
     Parameters parameters = parameters();
 
-    assertThat(WhereClause.of(table, Filter.parse(""), "T", parameters)).isEqualTo("(1 = 1)");
+    assertThat(WhereClause.of(table, EBNF.parse(""), "T", parameters)).isEqualTo("(1 = 1)");
     assertThat(parameters.values()).isEmpty();
   }
 
@@ -49,7 +52,7 @@ class WhereClauseTest {
   @Test
   @DisplayName("compiles the operators, the implicit search and the key-value member")
   void complexFilter() {
-    Filter filter = Filter.parse(
+    Filter filter = EBNF.parse(
         "implicit (foo=\"explicitone\") OR -path.to.bar=\"explicittwo\" AND foo!=\"explicitthree\" OR path.to.baz:\"explicitfour\" OR path.to.keyvalue.key:\"explicitfive\"");
     Parameters parameters = new Parameters(ParameterStyle.DOLLAR);
 
@@ -65,7 +68,7 @@ class WhereClauseTest {
   @Test
   @DisplayName("names the fields the resource does have when a field is missing")
   void fieldDoesNotExist() {
-    Filter filter = Filter.parse("path.to.nonexisting=\"somevalue\"");
+    Filter filter = EBNF.parse("path.to.nonexisting=\"somevalue\"");
 
     assertThatThrownBy(() -> WhereClause.of(table, filter, "T", parameters()))
         .isInstanceOf(InvalidQueryException.class)
@@ -79,7 +82,7 @@ class WhereClauseTest {
   @DisplayName("looks up a very long path in linear time")
   void longPaths() {
     String longest = "a" + ".a".repeat(Filter.MAX_LENGTH / 2 - 6) + " = \"x\"";
-    Filter filter = Filter.parse(longest);
+    Filter filter = EBNF.parse(longest);
 
     long start = System.nanoTime();
     assertThatThrownBy(() -> WhereClause.of(table, filter, "T", parameters())).isInstanceOf(InvalidQueryException.class);
@@ -89,9 +92,7 @@ class WhereClauseTest {
   @Test
   @DisplayName("a quoted left hand side is a value, not a field")
   void quotedLeftHandSide() {
-    Filter filter = Filter.parse("\"foo\"=\"somevalue\"");
-
-    assertThatThrownBy(() -> WhereClause.of(table, filter, "T", parameters()))
+    assertThatThrownBy(() -> EBNF.parse("\"foo\"=\"somevalue\""))
         .isInstanceOf(InvalidQueryException.class)
         .hasMessageContaining("expected a field name on the left hand side");
   }
@@ -101,7 +102,7 @@ class WhereClauseTest {
   void noImplicitFields() {
     DatabaseTable plain = new DatabaseTable(new Field.Builder("foo").backend(new StringColumn("db_foo")).filterable().build());
 
-    assertThatThrownBy(() -> WhereClause.of(plain, Filter.parse("bare"), "T", parameters()))
+    assertThatThrownBy(() -> WhereClause.of(plain, EBNF.parse("bare"), "T", parameters()))
         .isInstanceOf(InvalidQueryException.class)
         .hasMessageContaining("no fields are configured to match the bare value 'bare'");
   }
@@ -111,7 +112,7 @@ class WhereClauseTest {
   void injection() {
     Parameters parameters = parameters();
 
-    String sql = WhereClause.of(table, Filter.parse("foo=\"' OR 1=1 --\""), null, parameters);
+    String sql = WhereClause.of(table, EBNF.parse("foo=\"' OR 1=1 --\""), null, parameters);
 
     assertThat(sql).isEqualTo("(db_foo = ?)");
     assertThat(parameters.values()).containsExactly("' OR 1=1 --");
@@ -130,7 +131,7 @@ class WhereClauseTest {
   @ValueSource(strings = { "_t", "aquery", "aqueryt", "t_aquery_" })
   @DisplayName("other identifiers are table aliases")
   void unreservedAlias(String alias) {
-    assertThatNoException().isThrownBy(() -> WhereClause.of(table, Filter.parse("foo=\"x\""), alias, parameters()));
+    assertThatNoException().isThrownBy(() -> WhereClause.of(table, EBNF.parse("foo=\"x\""), alias, parameters()));
   }
 
   @ParameterizedTest(name = "alias [{0}]")
@@ -143,7 +144,7 @@ class WhereClauseTest {
   @Test
   @DisplayName("without a table alias, columns are named plainly")
   void noAlias() {
-    assertThat(WhereClause.of(table, Filter.parse("foo=\"one\""), "", parameters())).isEqualTo("(db_foo = ?)");
+    assertThat(WhereClause.of(table, EBNF.parse("foo=\"one\""), "", parameters())).isEqualTo("(db_foo = ?)");
   }
 
   @Test
@@ -152,7 +153,7 @@ class WhereClauseTest {
     Parameters parameters = new Parameters(ParameterStyle.AT_P);
     parameters.bind("tenant");
 
-    String sql = WhereClause.of(table, Filter.parse("foo=\"one\""), "T", parameters);
+    String sql = WhereClause.of(table, EBNF.parse("foo=\"one\""), "T", parameters);
 
     assertThat(sql).isEqualTo("(T.db_foo = @p2)");
     assertThat(parameters.values()).containsExactly("tenant", "one");
@@ -161,8 +162,8 @@ class WhereClauseTest {
   @Test
   @DisplayName("a filter at the depth limit compiles")
   void deepFilters() {
-    String deep = "(".repeat(Filter.MAX_DEPTH) + "foo=\"x\"" + ")".repeat(Filter.MAX_DEPTH);
+    String deep = "(".repeat(EbnfFilterParser.MAX_DEPTH) + "foo=\"x\"" + ")".repeat(EbnfFilterParser.MAX_DEPTH);
 
-    assertThatNoException().isThrownBy(() -> WhereClause.of(table, Filter.parse(deep), "T", parameters()));
+    assertThatNoException().isThrownBy(() -> WhereClause.of(table, EBNF.parse(deep), "T", parameters()));
   }
 }

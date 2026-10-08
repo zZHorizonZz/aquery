@@ -1,20 +1,20 @@
-package dev.horizon.aquery.internal.aip160;
+package dev.horizon.aquery.ebnf;
 
-import dev.horizon.aquery.aip160.Filter;
-import dev.horizon.aquery.aip160.Filter.Arg;
-import dev.horizon.aquery.aip160.Filter.Comparable;
-import dev.horizon.aquery.aip160.Filter.Expression;
-import dev.horizon.aquery.aip160.Filter.Factor;
-import dev.horizon.aquery.aip160.Filter.Member;
-import dev.horizon.aquery.aip160.Filter.Restriction;
-import dev.horizon.aquery.aip160.Filter.Sequence;
-import dev.horizon.aquery.aip160.Filter.Simple;
-import dev.horizon.aquery.aip160.Filter.Term;
-import dev.horizon.aquery.aip160.Filter.Value;
 import dev.horizon.aquery.aip160.InvalidFilterException;
 import dev.horizon.aquery.aip160.Operator;
-import dev.horizon.aquery.internal.aip160.Lexer.Kind;
-import dev.horizon.aquery.internal.aip160.Lexer.Token;
+import dev.horizon.aquery.ebnf.Ast.Arg;
+import dev.horizon.aquery.ebnf.Ast.Comparable;
+import dev.horizon.aquery.ebnf.Ast.Expression;
+import dev.horizon.aquery.ebnf.Ast.Factor;
+import dev.horizon.aquery.ebnf.Ast.Member;
+import dev.horizon.aquery.ebnf.Ast.Restriction;
+import dev.horizon.aquery.ebnf.Ast.Root;
+import dev.horizon.aquery.ebnf.Ast.Sequence;
+import dev.horizon.aquery.ebnf.Ast.Simple;
+import dev.horizon.aquery.ebnf.Ast.Term;
+import dev.horizon.aquery.ebnf.Ast.Value;
+import dev.horizon.aquery.ebnf.Lexer.Kind;
+import dev.horizon.aquery.ebnf.Lexer.Token;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,7 +42,7 @@ import java.util.List;
  * The parser differs from LUCI in these points:
  *
  * <ul>
- * <li>Parentheses can have at most {@code Filter.MAX_DEPTH} levels. Thus a deep filter cannot overflow the stack.
+ * <li>Parentheses can have at most {@code EbnfFilterParser.MAX_DEPTH} levels. Thus a deep filter cannot overflow the stack.
  * <li>A minus sign immediately before a text argument is part of the argument. Thus {@code age > -30} compares
  * with a negative number. A minus sign with whitespace after it is a negation.
  * <li>A word immediately before a parenthesis is a function call. The parser refuses it, because it does not
@@ -70,16 +70,16 @@ final class Parser {
   /**
    * Parses all the input.
    *
-   * @return the parsed filter. The filter is empty if the input has no tokens
+   * @return the syntax tree. The expression of the tree is null if the input has no tokens
    * @throws InvalidFilterException if the input does not follow the grammar, or if parentheses nest too deep
    */
-  Filter filter() {
+  Root filter() {
     if (peek().kind() == Kind.END) {
-      return new Filter(null);
+      return new Root(null);
     }
     Expression expression = expression();
     expect(Kind.END);
-    return new Filter(expression);
+    return new Root(expression);
   }
 
   private Expression expression() {
@@ -200,8 +200,8 @@ final class Parser {
     if (open == null) {
       return null;
     }
-    if (++depth > Filter.MAX_DEPTH) {
-      throw new InvalidFilterException(open.start(), "parentheses nest more than %d levels deep", Filter.MAX_DEPTH);
+    if (++depth > EbnfFilterParser.MAX_DEPTH) {
+      throw new InvalidFilterException(open.start(), "parentheses nest more than %d levels deep", EbnfFilterParser.MAX_DEPTH);
     }
     Expression expression = required(expression(), "expected expression after '('");
     expect(Kind.RPAREN);

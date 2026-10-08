@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.horizon.aquery.InvalidQueryException;
-import dev.horizon.aquery.aip160.Filter.Arg;
+import dev.horizon.aquery.aip160.Filter.Restriction;
+import dev.horizon.aquery.aip160.Filter.Value;
+import dev.horizon.aquery.ebnf.EbnfFilterParser;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -19,21 +21,13 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class ArgsTest {
 
+  private static final FilterParser EBNF = new EbnfFilterParser();
+
   private static final Args.EnumDefinition STATUS = new Args.EnumDefinition("Status",
       Map.of("STATUS_UNSPECIFIED", 0, "ACTIVE", 1, "INACTIVE", 2), 0);
 
-  private static Arg argOf(String filter) {
-    return Filter.parse(filter)
-        .expression()
-        .sequences()
-        .getFirst()
-        .factors()
-        .getFirst()
-        .terms()
-        .getFirst()
-        .simple()
-        .restriction()
-        .arg();
+  private static Value argOf(String filter) {
+    return ((Restriction) EBNF.parse(filter).condition()).value();
   }
 
   @ParameterizedTest(name = "[{0}]")

@@ -14,6 +14,8 @@
       "extra-files": [
         "aquery-api/pom.xml",
         "aquery-internal/pom.xml",
+        "aquery-grammar-ebnf/pom.xml",
+        "aquery-grammar-cel/pom.xml",
         "aquery/pom.xml",
         "README.md"
       ]

@@ -1,5 +1,6 @@
 package dev.horizon.aquery.aip160;
 
+import java.util.EnumSet;
 import java.util.Set;
 
 /**
@@ -17,7 +18,11 @@ import java.util.Set;
  * column.
  * <li>{@code name : "dan"} matches a substring: {@code LIKE '%dan%' ESCAPE '!'}. The SQL escapes the {@code !},
  * {@code %} and {@code _} characters of the client. Thus they match as usual characters.
+ * <li>{@code name.startsWith("da")} and {@code name.endsWith("an")} in CEL match a prefix and a suffix with LIKE.
  * </ul>
+ *
+ * <p>
+ * A CEL string has no wildcards. Thus {@code name == "*.foo"} in CEL compares with {@code =}.
  *
  * <p>
  * The field also answers implicit restrictions in the same way. A bare value in the filter matches as a
@@ -31,7 +36,7 @@ import java.util.Set;
  */
 public class StringColumn extends SimpleColumn {
 
-  private static final Set<Operator> OPERATORS = Set.of(Operator.values());
+  private static final Set<Operator> OPERATORS = Set.copyOf(EnumSet.complementOf(EnumSet.of(Operator.IN)));
 
   public StringColumn(String databaseName) {
     super(databaseName);
@@ -51,8 +56,10 @@ public class StringColumn extends SimpleColumn {
   public String restrictionQuery(RestrictionContext restriction, Generator generator) {
     String value = argument(restriction, Args::coerceToStringConstant);
     return switch (restriction.operator()) {
-      case HAS -> "(" + like(column(generator), containsPattern(value), generator) + ")";
-      case EQUALS, NOT_EQUALS -> "(" + stringEquality(column(generator), restriction.operator(), value, generator) + ")";
+      case HAS, STARTS_WITH, ENDS_WITH ->
+        "(" + like(column(generator), matchPattern(restriction.operator(), value), generator) + ")";
+      case EQUALS, NOT_EQUALS -> "(" + stringEquality(column(generator), restriction.operator(), value,
+          Args.hasWildcards(restriction.value()), generator) + ")";
       default -> comparison(restriction, generator, generator.bind(value));
     };
   }

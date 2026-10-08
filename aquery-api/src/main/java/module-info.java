@@ -8,5 +8,4 @@ module dev.horizon.aquery.api {
 
   uses dev.horizon.aquery.aip132.OrderByParser;
   uses dev.horizon.aquery.aip157.ReadMaskParser;
-  uses dev.horizon.aquery.aip160.FilterParser;
 }
