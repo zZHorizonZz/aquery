@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/zZHorizonZz/aquery/compare/v0.1.0...v0.2.0) (2026-10-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* Filter.parse is removed. Make an EbnfFilterParser or a CelFilterParser. The AIP-160 syntax tree is no longer public. FieldBackend.RestrictionContext.arg() is now value(), and the Args readers take a Filter.Value. A string on the left side of a restriction, a bare value with dots and a parenthesized argument are now refused when the text is parsed. Page token fingerprints change, thus page tokens from 0.1.0 are refused.
+
+### Features
+
+* support CEL filters next to AIP-160 ([d0fe433](https://github.com/zZHorizonZz/aquery/commit/d0fe43341892a27d509193148179cc0bbc3a1bf1))
+
 ## 0.1.0 (2026-09-26)
 
 
