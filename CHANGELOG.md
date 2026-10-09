@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/zZHorizonZz/aquery/compare/v0.2.0...v0.3.0) (2026-10-09)
+
+
+### Features
+
+* let parameter styles name their values ([d3f5478](https://github.com/zZHorizonZz/aquery/commit/d3f5478f91b945e59cf6f13eecf635384766ed25))
+
 ## [0.2.0](https://github.com/zZHorizonZz/aquery/compare/v0.1.0...v0.2.0) (2026-10-08)
 
 
