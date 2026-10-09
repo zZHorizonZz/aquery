@@ -1,7 +1,10 @@
 package dev.horizon.aquery;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -11,7 +14,7 @@ import java.util.Objects;
  * Use one instance for all clauses of one statement, for example the filter and the keyset. Then the placeholders
  * of the clauses do not collide, and numbered placeholders continue from one clause to the next. Put the clauses
  * into the statement in the sequence in which you wrote them. Then give the values to the driver in the sequence of
- * {@link #values()}.
+ * {@link #values()}. If the style names its values, give them by name with {@link #valuesByName()}.
  *
  * <p>
  * Each placeholder in the SQL text binds its own value. A value that the SQL uses two times is bound two times. Thus
@@ -55,6 +58,24 @@ public final class Parameters {
    */
   public List<Object> values() {
     return List.copyOf(values);
+  }
+
+  /**
+   * Gives the bound values by the names of their placeholders.
+   *
+   * @return the values by name, in the sequence of the binds. The map cannot change
+   * @throws UnsupportedOperationException if the style does not name its values
+   * @throws IllegalStateException if the style gives the same name to two values
+   */
+  public Map<String, Object> valuesByName() {
+    Map<String, Object> byName = new LinkedHashMap<>();
+    for (int i = 0; i < values.size(); i++) {
+      String name = style.name(i);
+      if (byName.putIfAbsent(name, values.get(i)) != null) {
+        throw new IllegalStateException("the parameter style gives the name '" + name + "' to two values");
+      }
+    }
+    return Collections.unmodifiableMap(byName);
   }
 
   /**

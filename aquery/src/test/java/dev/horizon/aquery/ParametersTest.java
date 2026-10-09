@@ -2,6 +2,7 @@ package dev.horizon.aquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
 
 import dev.horizon.aquery.aip132.FieldPath;
 import dev.horizon.aquery.aip132.OrderBy;
@@ -16,6 +17,7 @@ import dev.horizon.aquery.ebnf.EbnfFilterParser;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,18 @@ import org.junit.jupiter.params.provider.MethodSource;
 class ParametersTest {
 
   private static final FilterParser EBNF = new EbnfFilterParser();
+
+  private static final ParameterStyle CUSTOM = new ParameterStyle() {
+    @Override
+    public String name(int index) {
+      return "arg" + (index + 1);
+    }
+
+    @Override
+    public String placeholder(int index) {
+      return ":" + name(index);
+    }
+  };
 
   private final DatabaseTable table = new DatabaseTable(
       new Field.Builder("name").backend(new StringColumn("name")).filterable().build(),
@@ -44,6 +58,7 @@ class ParametersTest {
     Named<ParameterStyle> dollar = Named.of("DOLLAR", ParameterStyle.DOLLAR);
     Named<ParameterStyle> atP = Named.of("AT_P", ParameterStyle.AT_P);
     Named<ParameterStyle> colon = Named.of("COLON", ParameterStyle.COLON);
+    Named<ParameterStyle> custom = Named.of("custom", CUSTOM);
     return List.of(
         Arguments.of(questionMark, 0, "?"),
         Arguments.of(questionMark, 7, "?"),
@@ -52,7 +67,9 @@ class ParametersTest {
         Arguments.of(atP, 0, "@p1"),
         Arguments.of(atP, 4, "@p5"),
         Arguments.of(colon, 0, ":1"),
-        Arguments.of(colon, 2, ":3"));
+        Arguments.of(colon, 2, ":3"),
+        Arguments.of(custom, 0, ":arg1"),
+        Arguments.of(custom, 2, ":arg3"));
   }
 
   @Test
@@ -78,6 +95,75 @@ class ParametersTest {
 
     assertThat(values).containsExactly("a");
     assertThatThrownBy(() -> values.add("c")).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  @DisplayName("a named style gives the values by the names of their placeholders")
+  void valuesByName() {
+    Parameters parameters = new Parameters(CUSTOM);
+    List<OrderBy> order = List.of(new OrderBy(new FieldPath("create_time"), true), new OrderBy(new FieldPath("id"), false));
+
+    String where = WhereClause.of(table, EBNF.parse("name = \"dan\""), "T", parameters);
+    String after = new Keyset(table, order).after(List.of("2012-04-21T15:30:00Z", "abc"), "T", parameters);
+
+    OffsetDateTime created = OffsetDateTime.of(2012, 4, 21, 15, 30, 0, 0, ZoneOffset.UTC);
+    assertThat(where).isEqualTo("(T.name = :arg1)");
+    assertThat(after).isEqualTo("((T.create_time < :arg2) OR (T.create_time = :arg3 AND T.id > :arg4))");
+    assertThat(parameters.valuesByName()).containsExactly(entry("arg1", "dan"), entry("arg2", created),
+        entry("arg3", created), entry("arg4", "abc"));
+  }
+
+  @Test
+  @DisplayName("the values by name are an unmodifiable copy")
+  void valuesByNameAreACopy() {
+    Parameters parameters = new Parameters(CUSTOM);
+    parameters.bind("a");
+
+    Map<String, Object> values = parameters.valuesByName();
+    parameters.bind("b");
+
+    assertThat(values).containsOnlyKeys("arg1");
+    assertThatThrownBy(() -> values.put("arg2", "c")).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  @DisplayName("a style of your own gives its own names")
+  void customNames() {
+    Parameters parameters = new Parameters(CUSTOM);
+
+    assertThat(parameters.bind("a")).isEqualTo(":arg1");
+    assertThat(parameters.bind(2L)).isEqualTo(":arg2");
+    assertThat(parameters.valuesByName()).containsExactly(entry("arg1", "a"), entry("arg2", 2L));
+  }
+
+  @Test
+  @DisplayName("a style without names refuses to give the values by name")
+  void positionalStyleHasNoNames() {
+    Parameters parameters = new Parameters(ParameterStyle.DOLLAR);
+    parameters.bind("a");
+
+    assertThatThrownBy(parameters::valuesByName).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  @DisplayName("refuses a style that gives the same name to two values")
+  void duplicateNames() {
+    ParameterStyle same = new ParameterStyle() {
+      @Override
+      public String name(int index) {
+        return "v";
+      }
+
+      @Override
+      public String placeholder(int index) {
+        return ":v";
+      }
+    };
+    Parameters parameters = new Parameters(same);
+    parameters.bind("a");
+    parameters.bind("b");
+
+    assertThatThrownBy(parameters::valuesByName).isInstanceOf(IllegalStateException.class).hasMessageContaining("'v'");
   }
 
   @Test

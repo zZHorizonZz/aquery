@@ -141,14 +141,36 @@ of the statement. Then the placeholders do not collide, and numbered placeholder
 one clause to the next. Each placeholder in the SQL binds its own value, in the sequence of the
 text. Thus `?` works.
 
-| Style | Placeholders | Driver |
-| --- | --- | --- |
-| `ParameterStyle.QUESTION_MARK` | `?` | JDBC |
-| `ParameterStyle.DOLLAR` | `$1`, `$2` | PostgreSQL protocol |
-| `ParameterStyle.AT_P` | `@p1`, `@p2` | SQL Server |
-| `ParameterStyle.COLON` | `:1`, `:2` | Oracle |
+| Style                          | Placeholders | Driver              |
+|--------------------------------|--------------|---------------------|
+| `ParameterStyle.QUESTION_MARK` | `?`          | JDBC                |
+| `ParameterStyle.DOLLAR`        | `$1`, `$2`   | PostgreSQL protocol |
+| `ParameterStyle.AT_P`          | `@p1`, `@p2` | SQL Server          |
+| `ParameterStyle.COLON`         | `:1`, `:2`   | other drivers       |
 
-Write your own `ParameterStyle` for a different driver.
+For a different driver, write your own `ParameterStyle`. A style that numbers its values is a
+lambda, for example `index -> "?" + (index + 1)`.
+
+Some libraries bind values by name. A style for them also overrides `name`. Its placeholder
+contains the name. Then `valuesByName()` gives the values by name:
+
+```java
+ParameterStyle named = new ParameterStyle() {
+  @Override
+  public String name(int index) {
+    return "arg" + (index + 1);
+  }
+
+  @Override
+  public String placeholder(int index) {
+    return ":" + name(index);
+  }
+};
+
+Parameters parameters = new Parameters(named);
+String where = WhereClause.of(users, filter, "T", parameters);
+// where: (T.name = :arg1), parameters.valuesByName(): {arg1=dan}
+```
 
 ## Page tokens
 
