@@ -43,6 +43,7 @@
     <module>aquery-grammar-ebnf</module>
     <module>aquery-grammar-cel</module>
     <module>aquery</module>
+    <module>aquery-it</module>
   </modules>
 
   <properties>

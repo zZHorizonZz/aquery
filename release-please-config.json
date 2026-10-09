@@ -17,6 +17,7 @@
         "aquery-grammar-ebnf/pom.xml",
         "aquery-grammar-cel/pom.xml",
         "aquery/pom.xml",
+        "aquery-it/pom.xml",
         "README.md"
       ]
     }

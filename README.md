@@ -6,9 +6,9 @@ aquery compiles the arguments of a List request to SQL. It supports
 and [AIP-157](https://google.aip.dev/157) read masks.
 
 aquery checks the text from the client against the schema of a resource. Then it gives SQL
-fragments and bound values. The SQL is portable ISO SQL. PostgreSQL, MySQL, SQL Server, Oracle and
-H2 all run it. The design follows the `aip160` and `aip132` packages of
-[LUCI](https://chromium.googlesource.com/infra/luci/luci-go).
+fragments and bound values. The SQL is portable ISO SQL. PostgreSQL, MySQL, SQL Server, SQLite
+and H2 run it. [Databases](#databases) shows how they are different. The design follows the
+`aip160` and `aip132` packages of [LUCI](https://chromium.googlesource.com/infra/luci/luci-go).
 
 ## Installation
 
@@ -97,10 +97,10 @@ SelectClause.Result select = SelectClause.of(users, ReadMask.parse("username"), 
 
 Each filter language has its own module and its own `FilterParser`:
 
-| Module | Parser | Language |
-| --- | --- | --- |
+| Module                | Parser             | Language                                                                         |
+|-----------------------|--------------------|----------------------------------------------------------------------------------|
 | `aquery-grammar-ebnf` | `EbnfFilterParser` | the [AIP-160](https://google.aip.dev/160) EBNF. The `aquery` module includes it. |
-| `aquery-grammar-cel` | `CelFilterParser` | [CEL](https://cel.dev) |
+| `aquery-grammar-cel`  | `CelFilterParser`  | [CEL](https://cel.dev)                                                           |
 
 The server makes the parser of the language that it accepts, and keeps it. All parsers give the
 same `Filter` tree, thus the schema, the backends and the SQL are the same:
@@ -117,18 +117,18 @@ the two interfaces.
 
 The CEL parser supports the part of CEL that SQL can answer:
 
-| CEL | AIP-160 |
-| --- | --- |
-| `a && b`, `a \|\| b`, `!a` | `a AND b`, `a OR b`, `NOT a` |
-| `count >= 10`, `10 <= count` | `count >= 10` |
-| `locked` | `locked = true` |
-| `name.contains("x")` | `name : "x"` |
-| `name.startsWith("x")`, `name.endsWith("x")` | none |
-| `status in [ACTIVE, PENDING]` | `status = ACTIVE OR status = PENDING` |
-| `"prod" in tags` | `tags = "prod"` |
-| `"site" in labels`, `has(labels.site)` | `labels:site` |
-| `labels.site == "x"`, `labels["site"] == "x"` | `labels.site = "x"` |
-| `age > duration("1m30s")` | `age > 90s` |
+| CEL                                               | AIP-160                                |
+|---------------------------------------------------|----------------------------------------|
+| `a && b`, `a \|\| b`, `!a`                        | `a AND b`, `a OR b`, `NOT a`           |
+| `count >= 10`, `10 <= count`                      | `count >= 10`                          |
+| `locked`                                          | `locked = true`                        |
+| `name.contains("x")`                              | `name : "x"`                           |
+| `name.startsWith("x")`, `name.endsWith("x")`      | none                                   |
+| `status in [ACTIVE, PENDING]`                     | `status = ACTIVE OR status = PENDING`  |
+| `"prod" in tags`                                  | `tags = "prod"`                        |
+| `"site" in labels`, `has(labels.site)`            | `labels:site`                          |
+| `labels.site == "x"`, `labels["site"] == "x"`     | `labels.site = "x"`                    |
+| `age > duration("1m30s")`                         | `age > 90s`                            |
 | `create_time > timestamp("2012-04-21T11:30:00Z")` | `create_time > "2012-04-21T11:30:00Z"` |
 
 A CEL string has no wildcards: `name == "*.com"` compares with `=`. The parser refuses arithmetic,
@@ -199,25 +199,25 @@ timestamp.
 
 A field declares a `FieldBackend` that writes its SQL. The library has these backends:
 
-| Backend | Column | Bound value |
-| --- | --- | --- |
-| `StringColumn` | VARCHAR | `String` |
-| `OpaqueStringColumn` | VARCHAR with encoded values | `String` |
-| `BoolColumn` | BOOLEAN | `Boolean` |
-| `IntegerColumn` | BIGINT | `Long` |
-| `DurationColumn` | BIGINT with nanoseconds | `Long` |
-| `TimestampColumn` | TIMESTAMP WITH TIME ZONE | `OffsetDateTime` in UTC |
-| `EnumColumn` | integer or VARCHAR, see `EnumColumn.Storage` | `Long` or `String` |
-| `UuidColumn` | UUID | `UUID` |
-| `RepeatedStringColumn` | array of VARCHAR | `String` |
-| `KeyValueColumn` | array of `key:value` strings, or a child table | `String` |
-| `SimpleColumn` | any, sort only | `String` cursor |
+| Backend                | Column                                         | Bound value             |
+|------------------------|------------------------------------------------|-------------------------|
+| `StringColumn`         | VARCHAR                                        | `String`                |
+| `OpaqueStringColumn`   | VARCHAR with encoded values                    | `String`                |
+| `BoolColumn`           | BOOLEAN                                        | `Boolean`               |
+| `IntegerColumn`        | BIGINT                                         | `Long`                  |
+| `DurationColumn`       | BIGINT with nanoseconds                        | `Long`                  |
+| `TimestampColumn`      | TIMESTAMP WITH TIME ZONE                       | `OffsetDateTime` in UTC |
+| `EnumColumn`           | integer or VARCHAR, see `EnumColumn.Storage`   | `Long` or `String`      |
+| `UuidColumn`           | UUID                                           | `UUID`                  |
+| `RepeatedStringColumn` | array of VARCHAR                               | `String`                |
+| `KeyValueColumn`       | array of `key:value` strings, or a child table | `String`                |
+| `SimpleColumn`         | any, sort only                                 | `String` cursor         |
 
 LIKE patterns use `!` as the escape character, as in `T.name LIKE ? ESCAPE '!'`.
 
-`RepeatedStringColumn` and the `STRING_ARRAY` form of `KeyValueColumn` need array columns. Only
-engines with arrays, for example PostgreSQL and H2, run their SQL. A child table works on all
-engines:
+`RepeatedStringColumn` and the `STRING_ARRAY` form of `KeyValueColumn` need array columns. Of
+the engines in [Databases](#databases), only PostgreSQL runs their SQL. H2 has array columns, but
+it cannot run their `UNNEST` subquery. A child table works on all engines:
 
 ```java
 new Field.Builder("labels")
@@ -233,6 +233,26 @@ To add a new type of field, write a new implementation of `FieldBackend`.
 Text from the client goes into the statement only through bound values. Column names come only
 from the schema. Thus the output is safe against SQL injection. Table aliases that start with
 `aquery_` are reserved for the SQL that the library writes.
+
+## Databases
+
+These databases run the SQL. They are different in these points:
+
+| Database        | Array fields | `LIKE` and `=` ignore case          | Convert before you bind                  |
+|-----------------|--------------|-------------------------------------|------------------------------------------|
+| PostgreSQL 17   | yes          | no                                  | nothing                                  |
+| SQL Server 2022 | no           | yes, with the default collation     | nothing                                  |
+| MySQL 8.4       | no           | yes, with the default collation     | `UUID` to text                           |
+| SQLite          | no           | only `LIKE`, only for ASCII letters | `UUID` to text, `OffsetDateTime` to text |
+| H2              | no           | no                                  | nothing                                  |
+
+The MySQL JDBC driver writes a `UUID` with Java serialization. Bind `uuid.toString()` to a
+`CHAR(36)` column.
+
+SQLite has no timestamp type. Its driver writes an `OffsetDateTime` as text, and the length of
+that text changes. Bind the timestamp as UTC text with a fixed length, for example
+`2024-01-01T00:00:00.500000000Z`. Then text comparison gives the same result as timestamp
+comparison. Read the column as text and parse it. Read a `UUID` column as text too.
 
 ## Requirements
 
