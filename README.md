@@ -28,7 +28,7 @@ repository and the dependency to your `pom.xml`:
   <dependency>
     <groupId>dev.horizon</groupId>
     <artifactId>aquery</artifactId>
-    <version>0.3.0</version>
+    <version>0.3.1-SNAPSHOT</version>
   </dependency>
 </dependencies>
 ```
@@ -42,7 +42,7 @@ and its dependencies. cel-java has no module names, thus put it on the class pat
 <dependency>
   <groupId>dev.horizon</groupId>
   <artifactId>aquery-grammar-cel</artifactId>
-  <version>0.3.0</version>
+  <version>0.3.1-SNAPSHOT</version>
 </dependency>
 ```
 <!-- x-release-please-end -->
