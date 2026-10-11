@@ -1,7 +1,7 @@
 package dev.horizon.aquery.cel;
 
 /**
- * The error that {@link CelTranslator} throws for a CEL expression that the filter does not support.
+ * The error that {@link CelFilterTranslator} throws for a CEL expression that the filter does not support.
  *
  * <p>
  * The error keeps the id of the expression. The translator changes it into an
@@ -9,11 +9,11 @@ package dev.horizon.aquery.cel;
  */
 final class Refusal extends RuntimeException {
 
-  private final long exprId;
+  private final long nodeId;
 
-  Refusal(long exprId, String message) {
+  Refusal(long nodeId, String message) {
     super(message, null, false, false);
-    this.exprId = exprId;
+    this.nodeId = nodeId;
   }
 
   /**
@@ -21,7 +21,7 @@ final class Refusal extends RuntimeException {
    *
    * @return the id in the CEL syntax tree
    */
-  long exprId() {
-    return exprId;
+  long nodeId() {
+    return nodeId;
   }
 }

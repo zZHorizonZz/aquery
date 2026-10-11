@@ -16,6 +16,7 @@ package dev.horizon.aquery;
  * <li>{@link dev.horizon.aquery.aip132.InvalidOrderByException} for order_by text.
  * <li>{@link dev.horizon.aquery.aip158.InvalidPageTokenException} for a page token.
  * <li>{@link dev.horizon.aquery.aip157.InvalidReadMaskException} for a read mask.
+ * <li>{@code InvalidExpressionException} of {@code aquery-grammar-cel} for an expression.
  * </ul>
  *
  * <p>
@@ -32,6 +33,7 @@ public class InvalidQueryException extends RuntimeException {
   public static final String ORDER_BY = "order_by";
   public static final String PAGE_TOKEN = "page_token";
   public static final String READ_MASK = "read_mask";
+  public static final String EXPRESSION = "expression";
 
   private final String field;
   private final int position;

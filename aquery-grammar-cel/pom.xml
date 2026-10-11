@@ -17,26 +17,18 @@
       <artifactId>aquery-api</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <!-- cel-java as one module; its own jars split packages, so none of them may come along. -->
     <dependency>
-      <groupId>dev.cel</groupId>
-      <artifactId>compiler</artifactId>
-      <version>${cel.version}</version>
+      <groupId>dev.horizon</groupId>
+      <artifactId>aquery-cel-java</artifactId>
+      <version>${project.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>dev.cel</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <manifestEntries>
-              <Automatic-Module-Name>dev.horizon.aquery.cel</Automatic-Module-Name>
-            </manifestEntries>
-          </archive>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
 </project>
