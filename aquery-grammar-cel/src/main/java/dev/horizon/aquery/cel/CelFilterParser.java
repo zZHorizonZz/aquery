@@ -1,13 +1,13 @@
 package dev.horizon.aquery.cel;
 
-import dev.cel.common.CelAbstractSyntaxTree;
 import dev.horizon.aquery.aip160.TranslatingFilterParser;
+import dev.horizon.aquery.shaded.cel.common.CelAbstractSyntaxTree;
 
 /**
  * The parser of CEL filter text.
  *
  * <p>
- * The parser has two steps. {@link CelSyntaxParser} parses the text with cel-java. {@link CelTranslator} then
+ * The parser has two steps. {@link CelSyntaxParser} parses the text with cel-java. {@link CelFilterTranslator} then
  * changes the CEL syntax tree into the {@link dev.horizon.aquery.aip160.Filter} tree of the api.
  *
  * <p>
@@ -53,6 +53,6 @@ import dev.horizon.aquery.aip160.TranslatingFilterParser;
 public final class CelFilterParser extends TranslatingFilterParser<CelAbstractSyntaxTree> {
 
   public CelFilterParser() {
-    super(new CelSyntaxParser(), new CelTranslator());
+    super(new CelSyntaxParser(), new CelFilterTranslator());
   }
 }

@@ -1,23 +1,23 @@
 package dev.horizon.aquery.cel;
 
-import dev.cel.common.CelAbstractSyntaxTree;
-import dev.cel.common.CelIssue;
-import dev.cel.common.CelOptions;
-import dev.cel.common.CelValidationException;
-import dev.cel.common.CelValidationResult;
-import dev.cel.parser.CelParser;
-import dev.cel.parser.CelParserFactory;
-import dev.cel.parser.CelStandardMacro;
 import dev.horizon.aquery.aip160.Filter;
 import dev.horizon.aquery.aip160.InvalidFilterException;
 import dev.horizon.aquery.aip160.SyntaxParser;
+import dev.horizon.aquery.shaded.cel.common.CelAbstractSyntaxTree;
+import dev.horizon.aquery.shaded.cel.common.CelIssue;
+import dev.horizon.aquery.shaded.cel.common.CelOptions;
+import dev.horizon.aquery.shaded.cel.common.CelValidationException;
+import dev.horizon.aquery.shaded.cel.common.CelValidationResult;
+import dev.horizon.aquery.shaded.cel.parser.CelParser;
+import dev.horizon.aquery.shaded.cel.parser.CelParserFactory;
+import dev.horizon.aquery.shaded.cel.parser.CelStandardMacro;
 
 /**
  * Parses CEL text into the syntax tree of cel-java.
  *
  * <p>
  * The parser knows only the {@code has()} macro. Thus {@code exists()} and the other macros are usual function
- * calls, and {@link CelTranslator} refuses them. The text can have at most {@code Filter.MAX_LENGTH} code points.
+ * calls, and {@link CelFilterTranslator} refuses them. The text can have at most {@code Filter.MAX_LENGTH} code points.
  */
 final class CelSyntaxParser implements SyntaxParser<CelAbstractSyntaxTree> {
 

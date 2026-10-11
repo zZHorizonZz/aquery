@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>dev.horizon</groupId>
+    <artifactId>aquery-parent</artifactId>
+    <version>0.3.1-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>aquery-cel-java</artifactId>
+  <name>aQuery - cel-java</name>
+  <description>
+    cel-java in one jar, with its packages moved under dev.horizon.aquery.shaded.cel. cel-java splits packages between
+    its jars, which the module system refuses; one jar is one module, and the new packages never clash with another
+    copy of cel-java.
+  </description>
+
+  <dependencies>
+    <dependency>
+      <groupId>dev.cel</groupId>
+      <artifactId>compiler</artifactId>
+      <version>${cel.version}</version>
+    </dependency>
+    <!--
+      What cel-java needs, named here so that a user who excludes the jars of cel-java, as aquery-grammar-cel does,
+      still gets it. The versions are those of cel-java.
+    -->
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>33.6.0-jre</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>4.35.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.re2j</groupId>
+      <artifactId>re2j</artifactId>
+      <version>1.8</version>
+    </dependency>
+    <dependency>
+      <groupId>org.antlr</groupId>
+      <artifactId>antlr4-runtime</artifactId>
+      <version>4.13.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jspecify</groupId>
+      <artifactId>jspecify</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.auto.value</groupId>
+      <artifactId>auto-value-annotations</artifactId>
+      <version>1.11.1</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <createDependencyReducedPom>true</createDependencyReducedPom>
+              <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
+              <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
+              <artifactSet>
+                <includes>
+                  <include>dev.cel:*</include>
+                </includes>
+              </artifactSet>
+              <relocations>
+                <relocation>
+                  <pattern>dev.cel</pattern>
+                  <shadedPattern>dev.horizon.aquery.shaded.cel</shadedPattern>
+                </relocation>
+                <!-- The parser that ANTLR made for cel-java has a package of its own. -->
+                <relocation>
+                  <pattern>cel.parser.internal</pattern>
+                  <shadedPattern>dev.horizon.aquery.shaded.cel.parser.antlr</shadedPattern>
+                </relocation>
+              </relocations>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <manifestEntries>
+                    <Automatic-Module-Name>dev.horizon.aquery.shaded.cel</Automatic-Module-Name>
+                  </manifestEntries>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

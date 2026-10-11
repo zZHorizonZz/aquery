@@ -41,6 +41,7 @@
     <module>aquery-api</module>
     <module>aquery-internal</module>
     <module>aquery-grammar-ebnf</module>
+    <module>aquery-cel-java</module>
     <module>aquery-grammar-cel</module>
     <module>aquery</module>
     <module>aquery-it</module>

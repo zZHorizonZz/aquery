@@ -1,7 +1,7 @@
 package dev.horizon.aquery.cel;
 
-import dev.cel.common.CelSource;
-import dev.cel.common.CelSourceLocation;
+import dev.horizon.aquery.shaded.cel.common.CelSource;
+import dev.horizon.aquery.shaded.cel.common.CelSourceLocation;
 
 /**
  * Finds offsets in the text of a CEL source.
@@ -23,11 +23,11 @@ final class CelSourceText {
   /**
    * Gives the offset of an expression in the text.
    *
-   * @param exprId the id of the expression in the syntax tree
+   * @param nodeId the id of the expression in the syntax tree
    * @return the offset in characters, or -1 if the source has no position for the expression
    */
-  int offsetOf(long exprId) {
-    Integer codePoints = source.getPositionsMap().get(exprId);
+  int offsetOf(long nodeId) {
+    Integer codePoints = source.getPositionsMap().get(nodeId);
     return codePoints == null ? -1 : charOffset(codePoints);
   }
 
