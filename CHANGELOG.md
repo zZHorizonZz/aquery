@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/zZHorizonZz/aquery/compare/v0.3.0...v0.4.0) (2026-10-11)
+
+
+### Features
+
+* compile CEL expressions into a typed tree ([ad34269](https://github.com/zZHorizonZz/aquery/commit/ad34269d27a9513b0c43cc575d6929876336aa53))
+
 ## [0.3.0](https://github.com/zZHorizonZz/aquery/compare/v0.2.0...v0.3.0) (2026-10-09)
 
 
