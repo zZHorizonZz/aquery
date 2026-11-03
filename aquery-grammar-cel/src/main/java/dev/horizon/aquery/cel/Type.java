@@ -16,12 +16,23 @@ import java.util.Optional;
  * <p>
  * The types are the types of CEL: {@link Scalar} for single values, {@link ListOf} and {@link MapOf} for
  * collections, and {@link Struct} for a message with named members. {@link #ANY} is the element type of an empty
- * list, whose elements can have any type.
+ * list, whose elements can have any type. {@link #NULL} is the type of {@code null}, which only the overload of a
+ * function names.
  */
-public sealed interface Type permits Type.Scalar, Type.ListOf, Type.MapOf, Type.Struct, Type.Any {
+public sealed interface Type permits Type.Scalar, Type.ListOf, Type.MapOf, Type.Struct, Type.Any, Type.Null {
 
   /** The element type of a list without elements. */
   Type ANY = new Any();
+
+  /** The type of {@code null}. */
+  Type NULL = new Null();
+
+  /**
+   * Names this type in an error message, as CEL names it.
+   *
+   * @return the name, for example {@code list(string)}
+   */
+  String describe();
 
   /**
    * A single value.
@@ -37,7 +48,12 @@ public sealed interface Type permits Type.Scalar, Type.ListOf, Type.MapOf, Type.
     STRING,
     BYTES,
     TIMESTAMP,
-    DURATION
+    DURATION;
+
+    @Override
+    public String describe() {
+      return name().toLowerCase();
+    }
   }
 
   /**
@@ -49,6 +65,11 @@ public sealed interface Type permits Type.Scalar, Type.ListOf, Type.MapOf, Type.
 
     public ListOf {
       Objects.requireNonNull(element, "element");
+    }
+
+    @Override
+    public String describe() {
+      return "list(" + element.describe() + ")";
     }
   }
 
@@ -65,6 +86,11 @@ public sealed interface Type permits Type.Scalar, Type.ListOf, Type.MapOf, Type.
         throw new IllegalArgumentException("a map key is a string, an integer or a boolean, was " + key);
       }
       Objects.requireNonNull(value, "value");
+    }
+
+    @Override
+    public String describe() {
+      return "map(" + key.describe() + ", " + value.describe() + ")";
     }
   }
 
@@ -97,6 +123,11 @@ public sealed interface Type permits Type.Scalar, Type.ListOf, Type.MapOf, Type.
     public Optional<Member> member(String name) {
       return members.stream().filter(member -> member.name().equals(name)).findFirst();
     }
+
+    @Override
+    public String describe() {
+      return name;
+    }
   }
 
   /**
@@ -117,5 +148,19 @@ public sealed interface Type permits Type.Scalar, Type.ListOf, Type.MapOf, Type.
 
   /** Any type. Only the elements of an empty list have it. */
   record Any() implements Type {
+
+    @Override
+    public String describe() {
+      return "dyn";
+    }
+  }
+
+  /** The type of {@code null}. */
+  record Null() implements Type {
+
+    @Override
+    public String describe() {
+      return "null";
+    }
   }
 }

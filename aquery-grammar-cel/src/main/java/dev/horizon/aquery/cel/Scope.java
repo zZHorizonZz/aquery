@@ -114,47 +114,123 @@ public final class Scope {
   }
 
   /**
-   * How the value of a field is stored.
+   * A field of the scope, and how its value is stored.
    *
    * <ul>
-   * <li>{@link #VALUE}: in a column of the type of the field.
-   * <li>{@link #UUID}: a string that is a UUID, in a column of the UUID type of the database.
-   * <li>{@link #JSON}: a struct, a list or a map, as JSON text in one column. A path such as {@code address.country}
+   * <li>{@link Value}: in a column of the type of the field.
+   * <li>{@link Uuid}: a string that is a UUID, in a column of the UUID type of the database.
+   * <li>{@link Json}: a struct, a list or a map, as JSON text in one column. A path such as {@code address.country}
    * reads a value inside it.
    * </ul>
+   *
+   * <p>
+   * A field whose column can be NULL is nullable. An expression reads NULL as the default value of the type, and
+   * {@code has()} tells if the column has a value.
    */
-  public enum Storage {
-    VALUE,
-    UUID,
-    JSON
+  public sealed interface Field permits Value, Uuid, Json {
+
+    /**
+     * Gives the name of the field in an expression.
+     *
+     * @return the name, for example {@code total_cents}
+     */
+    String name();
+
+    /**
+     * Gives the type of the field.
+     *
+     * @return the type
+     */
+    Type type();
+
+    /**
+     * Gives the name of the column.
+     *
+     * @return the name: letters, digits and underscores
+     */
+    String column();
+
+    /**
+     * Tells if the column can be NULL.
+     *
+     * @return true if it can
+     */
+    boolean nullable();
+
+    /**
+     * Tells if the value is stored as JSON.
+     *
+     * @return true for a {@link Json} field
+     */
+    default boolean json() {
+      return false;
+    }
   }
 
   /**
-   * A field of the scope.
+   * A field in a column of its type.
    *
-   * @param name the name of the field in an expression, for example {@code total_cents}
+   * @param name the name of the field
    * @param type the type of the field
-   * @param column the name of the column. Letters, digits and underscores.
-   * @param storage how the value is stored
-   * @param nullable true if the column can be NULL. An expression reads NULL as the default value of the type, and
-   * {@code has()} tells if the column has a value.
+   * @param column the name of the column
+   * @param nullable true if the column can be NULL
    */
-  public record Field(String name, Type type, String column, Storage storage, boolean nullable) {
+  public record Value(String name, Type.Scalar type, String column, boolean nullable) implements Field {
 
-    public Field {
+    public Value {
       Objects.requireNonNull(name, "name");
       Objects.requireNonNull(type, "type");
-      Objects.requireNonNull(storage, "storage");
-      if (!Identifiers.isIdentifier(column)) {
-        throw new IllegalArgumentException("a column name has letters, digits and '_', was '" + column + "'");
+      requireColumn(column);
+    }
+  }
+
+  /**
+   * A string field that is a UUID, in a column of the UUID type of the database.
+   *
+   * @param name the name of the field
+   * @param column the name of the column
+   * @param nullable true if the column can be NULL
+   */
+  public record Uuid(String name, String column, boolean nullable) implements Field {
+
+    public Uuid {
+      Objects.requireNonNull(name, "name");
+      requireColumn(column);
+    }
+
+    @Override
+    public Type type() {
+      return Type.Scalar.STRING;
+    }
+  }
+
+  /**
+   * A struct, list or map field, as JSON text in one column.
+   *
+   * @param name the name of the field
+   * @param type the type of the field: a {@link Type.Struct}, a {@link Type.ListOf} or a {@link Type.MapOf}
+   * @param column the name of the column
+   * @param nullable true if the column can be NULL, for example a message field that is not set
+   */
+  public record Json(String name, Type type, String column, boolean nullable) implements Field {
+
+    public Json {
+      Objects.requireNonNull(name, "name");
+      if (!(type instanceof Type.Struct || type instanceof Type.ListOf || type instanceof Type.MapOf)) {
+        throw new IllegalArgumentException("the JSON field " + name + " is a struct, a list or a map, was " + type);
       }
-      boolean collection = type instanceof Type.Struct || type instanceof Type.ListOf || type instanceof Type.MapOf;
-      if (collection != (storage == Storage.JSON)) {
-        throw new IllegalArgumentException("the field " + name + " of type " + type + " cannot be stored as " + storage);
-      }
-      if (storage == Storage.UUID && type != Type.Scalar.STRING) {
-        throw new IllegalArgumentException("the field " + name + " is a UUID, so its type must be a string");
-      }
+      requireColumn(column);
+    }
+
+    @Override
+    public boolean json() {
+      return true;
+    }
+  }
+
+  private static void requireColumn(String column) {
+    if (!Identifiers.isIdentifier(column)) {
+      throw new IllegalArgumentException("a column name has letters, digits and '_', was '" + column + "'");
     }
   }
 
@@ -252,24 +328,24 @@ public final class Scope {
      * Adds a field in its own column that always has a value.
      *
      * @param name the name of the field
-     * @param type the type of the field, a {@link Type.Scalar}
+     * @param type the type of the field
      * @param column the name of the column
      * @return this builder
      */
-    public Builder column(String name, Type type, String column) {
-      return field(new Field(name, type, column, Storage.VALUE, false));
+    public Builder column(String name, Type.Scalar type, String column) {
+      return field(new Value(name, type, column, false));
     }
 
     /**
      * Adds a field in its own column that can be NULL.
      *
      * @param name the name of the field
-     * @param type the type of the field, a {@link Type.Scalar}
+     * @param type the type of the field
      * @param column the name of the column
      * @return this builder
      */
-    public Builder nullable(String name, Type type, String column) {
-      return field(new Field(name, type, column, Storage.VALUE, true));
+    public Builder nullable(String name, Type.Scalar type, String column) {
+      return field(new Value(name, type, column, true));
     }
 
     /**
@@ -281,7 +357,7 @@ public final class Scope {
      * @return this builder
      */
     public Builder uuid(String name, String column, boolean nullable) {
-      return field(new Field(name, Type.Scalar.STRING, column, Storage.UUID, nullable));
+      return field(new Uuid(name, column, nullable));
     }
 
     /**
@@ -294,7 +370,7 @@ public final class Scope {
      * @return this builder
      */
     public Builder json(String name, Type type, String column, boolean nullable) {
-      return field(new Field(name, type, column, Storage.JSON, nullable));
+      return field(new Json(name, type, column, nullable));
     }
 
     /**
