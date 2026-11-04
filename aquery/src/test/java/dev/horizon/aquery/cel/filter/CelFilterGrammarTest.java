@@ -2,12 +2,14 @@ package dev.horizon.aquery.cel.filter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import dev.horizon.aquery.aip132.FieldPath;
 import dev.horizon.aquery.aip160.Filter.And;
 import dev.horizon.aquery.aip160.Filter.BoolLiteral;
 import dev.horizon.aquery.aip160.Filter.Condition;
 import dev.horizon.aquery.aip160.Filter.IntLiteral;
+import dev.horizon.aquery.aip160.Filter.Or;
 import dev.horizon.aquery.aip160.Filter.Restriction;
 import dev.horizon.aquery.aip160.Filter.StringLiteral;
 import dev.horizon.aquery.aip160.Filter.Text;
@@ -20,8 +22,12 @@ import dev.horizon.aquery.cel.Syntax;
 import dev.horizon.aquery.cel.filter.operation.StringMatch;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class CelFilterGrammarTest {
 
@@ -124,15 +130,24 @@ class CelFilterGrammarTest {
             Operator.LESS_EQUALS, new IntLiteral(5)))));
   }
 
-  @Test
+  @ParameterizedTest(name = "[{0}]")
+  @MethodSource("decorated")
   @DisplayName("rewrites the conditions with a decorator of the caller")
-  void rewritesWithADecorator() {
+  void rewritesWithADecorator(String text, Condition expected) {
     CelFilterGrammar grammar = CelFilterGrammar.standard().with(Decorator.of(Restriction.class,
         restriction -> restriction.fieldPath().equals(new FieldPath("count"))
             ? new Restriction(new FieldPath("total"), restriction.operator(), restriction.value())
             : restriction));
-    assertThat(parse(grammar, "count > 1 && flag")).isEqualTo(new And(List.of(restriction("total",
-        Operator.GREATER_THAN, new IntLiteral(1)), restriction("flag", Operator.EQUALS, new BoolLiteral(true)))));
+    assertThat(parse(grammar, text)).isEqualTo(expected);
+  }
+
+  static Stream<Arguments> decorated() {
+    return Stream.of(
+        arguments("count > 1 && flag", new And(List.of(restriction("total", Operator.GREATER_THAN, new IntLiteral(1)),
+            restriction("flag", Operator.EQUALS, new BoolLiteral(true))))),
+        arguments("count in [1]", restriction("total", Operator.EQUALS, new IntLiteral(1))),
+        arguments("count in [1, 2]", new Or(List.of(restriction("total", Operator.EQUALS, new IntLiteral(1)),
+            restriction("total", Operator.EQUALS, new IntLiteral(2))))));
   }
 
   @Test

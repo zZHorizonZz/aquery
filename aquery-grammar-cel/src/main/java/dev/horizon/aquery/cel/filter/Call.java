@@ -1,5 +1,6 @@
 package dev.horizon.aquery.cel.filter;
 
+import dev.horizon.aquery.aip160.Filter.Condition;
 import dev.horizon.aquery.aip160.InvalidFilterException;
 import java.util.List;
 import java.util.Optional;
@@ -51,4 +52,15 @@ public interface Call {
    * @return the error, to throw
    */
   InvalidFilterException refuse(String message, Object... arguments);
+
+  /**
+   * Passes a condition that the operation builds inside the condition it returns through the decorators of the
+   * grammar. The grammar decorates the returned condition itself, and the conditions of {@link Operand#condition()}
+   * are decorated already, so an operation calls this only for the other conditions it builds, such as each
+   * equality of {@code field in [a, b]}.
+   *
+   * @param condition the condition
+   * @return the condition that the decorators give
+   */
+  Condition decorate(Condition condition);
 }

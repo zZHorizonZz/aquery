@@ -20,14 +20,18 @@ final class Translation {
   }
 
   Condition condition(CelExpr node) {
-    return grammar.decorate(translate(new Site(tree, node)));
+    return decorate(translate(new Site(tree, node)));
+  }
+
+  Condition decorate(Condition condition) {
+    return grammar.decorate(condition);
   }
 
   private Condition translate(Site site) {
     CelExpr node = site.node();
     FieldPathNode path = new FieldPathNode(node);
     if (node.getKind() == CelExpr.ExprKind.Kind.SELECT && node.select().testOnly()) {
-      return new Restriction(new FieldPath(path.segments()), Operator.HAS, new Text("*"));
+      return new Restriction(new FieldPath(path.presence(site)), Operator.HAS, new Text("*"));
     }
     if (path.valid()) {
       return new Restriction(new FieldPath(path.segments()), Operator.EQUALS, new BoolLiteral(true));

@@ -7,6 +7,7 @@ import dev.horizon.aquery.cel.expression.Expression.Variable;
 import dev.horizon.aquery.shaded.cel.common.ast.CelConstant;
 import dev.horizon.aquery.shaded.cel.common.ast.CelExpr;
 import dev.horizon.aquery.shaded.cel.common.ast.CelExpr.CelComprehension;
+import java.util.Locale;
 
 record Quantification(CelComprehension comprehension, Site site) {
 
@@ -26,7 +27,7 @@ record Quantification(CelComprehension comprehension, Site site) {
   }
 
   String function() {
-    return kind().name().toLowerCase();
+    return kind().name().toLowerCase(Locale.ROOT);
   }
 
   Expression quantifier(Variable variable, Expression range, Expression predicate) {

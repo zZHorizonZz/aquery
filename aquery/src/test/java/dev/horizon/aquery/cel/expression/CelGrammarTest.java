@@ -14,14 +14,17 @@ import dev.horizon.aquery.cel.expression.operation.Conditional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class CelGrammarTest {
 
@@ -490,10 +493,25 @@ class CelGrammarTest {
     void rewritesWithADecorator() {
       CelGrammar grammar = GRAMMAR.with(Decorator.of(Expression.Literal.class,
           literal -> literal.value() instanceof String text
-              ? new Expression.Literal(literal.type(), text.toLowerCase(), literal.position())
+              ? new Expression.Literal(literal.type(), text.toLowerCase(Locale.ROOT), literal.position())
               : literal));
       assertThat(show(compile(grammar, "state in ['OPEN', 'PAID'] && total_cents > 1", Type.Scalar.BOOL).root()))
           .isEqualTo("(&& (in state ['open' 'paid']) (> total_cents 1))");
+    }
+
+    @ParameterizedTest(name = "[{0}]")
+    @ValueSource(strings = { "labels['tier'] == 'gold'", "labels.tier == 'gold'", "has(labels.tier)", "has(note)",
+        "note == 'x'" })
+    @DisplayName("passes every field that an expression reads through a decorator of the caller")
+    void decoratesEveryField(String text) {
+      CelGrammar grammar = GRAMMAR.with(Decorator.of(Expression.FieldReference.class, field -> {
+        if (Set.of("labels", "note").contains(field.field().name())) {
+          throw new InvalidExpressionException(field.position(), "the field %s is private", field.field().name());
+        }
+        return field;
+      }));
+      assertThatThrownBy(() -> compile(grammar, text, Type.Scalar.BOOL)).isInstanceOf(InvalidExpressionException.class)
+          .hasMessageContaining("is private");
     }
 
     @Test
@@ -528,6 +546,7 @@ class CelGrammarTest {
         tags[total_cents] == 'a'                   | must be a constant or a parameter
         state in labels                            | a key 'in' a map must be a constant or a parameter
         {'a': 1}['a'] == 1                         | a map literal is not supported
+        int == int                                 | 'int' is not a field
         create_time > timestamp('yesterday')       | timestamp
         create_time > timestamp(state)             | expected a string constant in timestamp()
         """)

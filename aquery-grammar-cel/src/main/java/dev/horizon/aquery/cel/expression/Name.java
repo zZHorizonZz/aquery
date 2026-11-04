@@ -28,12 +28,24 @@ sealed interface Name permits Name.RowName, Name.NamedRowName, Name.EdgeName, Na
         quantification.function());
   }
 
+  default InvalidExpressionException unknown(String field, Site site) {
+    return site.refuse("'%s' is not a field", field);
+  }
+
+  default InvalidExpressionException unknown(String field, Scope scope, Site site) {
+    return site.refuse("'%s' is not a field of %s", field, scope.name());
+  }
+
+  default Name decorate(Site site) {
+    return this;
+  }
+
   default Expression presence(Expression value, Site site) {
     if (!value.optional()) {
       throw site.refuse("%s always has a value; has() tests only a field that can be unset or a member that is"
           + " optional", value.describe());
     }
-    return new Presence(value, site.position());
+    return new Presence(site.decorate(value), site.position());
   }
 
   record RowName(Scope scope, Row row, String path) implements Name {
@@ -46,13 +58,15 @@ sealed interface Name permits Name.RowName, Name.NamedRowName, Name.EdgeName, Na
     @Override
     public Name member(String field, Site site) {
       return scope.field(field).<Name> map(found -> new ValueName(new FieldReference(found, row, site.position())))
-          .orElseGet(() -> new EdgeName(scope.edge(field).orElseThrow(), row, List.of(), prefix() + field));
+          .orElseGet(() -> new EdgeName(scope.edge(field).orElseThrow(() -> unknown(field, site)), row, List.of(),
+              prefix() + field));
     }
 
     @Override
     public Expression presence(String field, Site site) {
       return scope.field(field).map(found -> presence(new FieldReference(found, row, site.position()), site))
-          .orElseGet(() -> new Related.Exists(new Row.Related(prefix() + field, scope.edge(field).orElseThrow(), row),
+          .orElseGet(() -> new Related.Exists(new Row.Related(prefix() + field, scope.edge(field)
+              .orElseThrow(() -> unknown(field, site)), row),
               new Literal(Type.Scalar.BOOL, true, site.position()), site.position()));
     }
 
@@ -96,9 +110,10 @@ sealed interface Name permits Name.RowName, Name.NamedRowName, Name.EdgeName, Na
       Row.Related row = row(site);
       Scope target = edge.target();
       return target.field(field)
-          .<Name> map(found -> new ValueName(wrap(new Related.Value(row, new FieldReference(found, row,
-              site.position()), site.position()))))
-          .orElseGet(() -> new EdgeName(target.edge(field).orElseThrow(), row, append(row), path + "." + field));
+          .<Name> map(found -> new ValueName(wrap(new Related.Value(row, site.decorate(new FieldReference(found, row,
+              site.position())), site.position()), site)))
+          .orElseGet(() -> new EdgeName(target.edge(field).orElseThrow(() -> unknown(field, target, site)), row,
+              append(row), path + "." + field));
     }
 
     @Override
@@ -108,9 +123,9 @@ sealed interface Name permits Name.RowName, Name.NamedRowName, Name.EdgeName, Na
       Expression body = target.field(field).map(found -> presence(new FieldReference(found, row, site.position()),
           site)).orElseGet(() -> new Related.Exists(
               new Row.Related(path + "." + field, target.edge(field)
-                  .orElseThrow(), row),
+                  .orElseThrow(() -> unknown(field, target, site)), row),
               new Literal(Type.Scalar.BOOL, true, site.position()), site.position()));
-      return wrap(new Related.Value(row, body, site.position()));
+      return wrap(new Related.Value(row, site.decorate(body), site.position()), site);
     }
 
     @Override
@@ -122,7 +137,7 @@ sealed interface Name permits Name.RowName, Name.NamedRowName, Name.EdgeName, Na
       Row.Related row = new Row.Related(quantification.variable(), edge, from);
       Expression predicate = translation.within(quantification.variable(),
           new RowName(edge.target(), row, quantification.variable()), quantification.predicate());
-      return wrap(quantification.related(row, predicate));
+      return wrap(quantification.related(row, predicate), quantification.site());
     }
 
     private Row.Related row(Site site) {
@@ -146,10 +161,10 @@ sealed interface Name permits Name.RowName, Name.NamedRowName, Name.EdgeName, Na
       return all;
     }
 
-    private Expression wrap(Expression inner) {
+    private Expression wrap(Expression inner, Site site) {
       Expression body = inner;
       for (Row.Related row : via.reversed()) {
-        body = new Related.Value(row, body, body.position());
+        body = new Related.Value(row, site.decorate(body), body.position());
       }
       return body;
     }
@@ -164,7 +179,8 @@ sealed interface Name permits Name.RowName, Name.NamedRowName, Name.EdgeName, Na
 
     @Override
     public Name member(String field, Site site) {
-      return new ValueName(new Parameter(field, parameters.type(field).orElseThrow(), site.position()));
+      return new ValueName(new Parameter(field, parameters.type(field)
+          .orElseThrow(() -> site.refuse("'%s' is not a parameter", field)), site.position()));
     }
 
     @Override
@@ -178,6 +194,11 @@ sealed interface Name permits Name.RowName, Name.NamedRowName, Name.EdgeName, Na
     @Override
     public Expression value(Site site) {
       return value;
+    }
+
+    @Override
+    public Name decorate(Site site) {
+      return new ValueName(site.decorate(value));
     }
 
     @Override
@@ -204,7 +225,8 @@ sealed interface Name permits Name.RowName, Name.NamedRowName, Name.EdgeName, Na
 
     private Expression member(Expression parent, String field, Site site) {
       return switch (parent.type()) {
-        case Type.Struct struct -> new MemberAccess(parent, struct.member(field).orElseThrow(), site.position());
+        case Type.Struct struct -> new MemberAccess(parent, struct.member(field)
+            .orElseThrow(() -> site.refuse("'%s' is not a member of a %s", field, struct.describe())), site.position());
         case Type.MapOf map -> new IndexAccess(parent, new Literal(Type.Scalar.STRING, field, site.position()),
             map.value(), site.position());
         default -> throw site.refuse("'%s' is not a member of a %s", field, parent.type().describe());

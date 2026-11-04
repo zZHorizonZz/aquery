@@ -2,6 +2,7 @@ package dev.horizon.aquery.cel;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -52,7 +53,7 @@ public sealed interface Type permits Type.Scalar, Type.ListOf, Type.MapOf, Type.
 
     @Override
     public String describe() {
-      return name().toLowerCase();
+      return name().toLowerCase(Locale.ROOT);
     }
   }
 

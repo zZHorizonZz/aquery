@@ -169,6 +169,7 @@ class CelFilterTest {
       age > duration("99999999999h") | is too long a duration
       create_time > timestamp("yesterday") | 'yesterday' is not a valid RFC 3339 timestamp
       count == 18446744073709551615u | does not fit in 64 bits
+      has(foo().bar) | has() takes a field
       """)
   @DisplayName("refuses CEL that a WHERE clause cannot answer")
   void refusesAtParse(String filter, String expectedMessage) {
@@ -187,6 +188,7 @@ class CelFilterTest {
       status == UNKNOWN | 'UNKNOWN' is not one of the valid Status values
       age > 5 | expected a duration like 1.2s
       nosuch == 1 | no filterable field 'nosuch'
+      aquery__record.count == 1 | no filterable field 'aquery__record.count'
       flag.startsWith("t") | operator 'startsWith' not implemented for field 'flag' of type BOOL
       "x" in name | operator 'in' not implemented for field 'name' of type STRING
       "x" in labels.site | the operator 'in' needs the key-value field itself

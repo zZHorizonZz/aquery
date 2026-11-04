@@ -26,11 +26,7 @@ record FieldPathNode(CelExpr node) {
 
   private static void add(CelExpr node, List<String> segments) {
     switch (node.getKind()) {
-      case IDENT -> {
-        if (!node.ident().name().equals(CelTree.RECORD)) {
-          segments.add(node.ident().name());
-        }
-      }
+      case IDENT -> segments.add(node.ident().name());
       case SELECT -> {
         add(node.select().operand(), segments);
         segments.add(node.select().field());
@@ -40,6 +36,20 @@ record FieldPathNode(CelExpr node) {
         segments.add(node.call().args().get(1).constant().stringValue());
       }
     }
+  }
+
+  List<String> presence(Site site) {
+    CelExpr operand = node.select().operand();
+    List<String> segments = new ArrayList<>();
+    if (!(operand.getKind() == CelExpr.ExprKind.Kind.IDENT && operand.ident().name().equals(CelTree.RECORD))) {
+      FieldPathNode parent = new FieldPathNode(operand);
+      if (!parent.valid()) {
+        throw site.refuse("has() takes a field, as in has(note) or has(labels.tier)");
+      }
+      segments.addAll(parent.segments());
+    }
+    segments.add(node.select().field());
+    return segments;
   }
 
   private boolean key() {

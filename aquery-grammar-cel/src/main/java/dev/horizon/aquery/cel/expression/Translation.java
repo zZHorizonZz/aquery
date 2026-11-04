@@ -32,7 +32,7 @@ final class Translation {
   }
 
   private Expression translate(CelExpr node) {
-    Site site = new Site(tree, node);
+    Site site = new Site(tree, node, grammar);
     return switch (node.getKind()) {
       case CONSTANT -> new Constant(node.constant(), site).literal();
       case IDENT -> name(node).value(site);
@@ -48,22 +48,27 @@ final class Translation {
   }
 
   private Name name(CelExpr node) {
-    Site site = new Site(tree, node);
+    Site site = new Site(tree, node, grammar);
     return switch (node.getKind()) {
       case IDENT -> names.find(node.ident().name(), site);
       case SELECT -> member(node, site);
-      default -> new Name.ValueName(expression(node));
+      default -> new Name.ValueName(translate(node));
     };
+  }
+
+  private Name operand(CelExpr node) {
+    return name(node).decorate(new Site(tree, node, grammar));
   }
 
   private Expression select(CelExpr node, Site site) {
     CelExpr.CelSelect select = node.select();
-    return select.testOnly() ? name(select.operand()).presence(select.field(), site) : name(node).value(site);
+    return select.testOnly() ? operand(select.operand()).presence(select.field(), site) : name(node).value(site);
   }
 
   private Name member(CelExpr node, Site site) {
     CelExpr.CelSelect select = node.select();
-    return select.testOnly() ? new Name.ValueName(expression(node)) : name(select.operand()).member(select.field(), site);
+    return select.testOnly() ? new Name.ValueName(translate(node))
+        : operand(select.operand()).member(select.field(), site);
   }
 
   private Expression call(Site site) {
@@ -74,7 +79,7 @@ final class Translation {
   }
 
   private Expression quantify(Quantification quantification) {
-    return name(quantification.range()).quantify(quantification, this);
+    return operand(quantification.range()).quantify(quantification, this);
   }
 
   private InvalidExpressionException unsupported(Site site) {

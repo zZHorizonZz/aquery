@@ -53,12 +53,14 @@ public final class CelEnvironment {
    * @param name the name of the row, for example {@code new}
    * @param row the fields of the row
    * @return the environment
-   * @throws IllegalArgumentException if the scope has a field or an edge with the name, or if the name is
-   * {@code params}
+   * @throws IllegalArgumentException if the scope has a field or an edge with the name, or if aquery reserves the name,
+   * as it does {@code params}
    */
   public CelEnvironment with(String name, Scope row) {
-    if (scope.field(name).isPresent() || scope.edge(name).isPresent() || name.equals(Checker.PARAMS)
-        || name.equals(CelTree.RECORD)) {
+    if (name.equals(Checker.PARAMS) || name.equals(CelTree.RECORD)) {
+      throw new IllegalArgumentException("the row " + name + " has a name that aquery reserves");
+    }
+    if (scope.field(name).isPresent() || scope.edge(name).isPresent()) {
       throw new IllegalArgumentException("the row " + name + " has the name of a field or an edge of " + scope.name());
     }
     Map<String, Scope> all = new LinkedHashMap<>(rows);

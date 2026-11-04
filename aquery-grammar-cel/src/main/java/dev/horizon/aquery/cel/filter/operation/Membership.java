@@ -37,7 +37,7 @@ public final class Membership implements Operation {
   public Condition translate(Call call, Next next) {
     Operand element = call.argument(0);
     Operand collection = call.argument(1);
-    return collection.list().map(values -> oneOf(element, values, collection)).orElseGet(() -> {
+    return collection.list().map(values -> oneOf(call, element, values, collection)).orElseGet(() -> {
       if (!collection.isField()) {
         throw collection.refuse("expected a field or a list after 'in' but found %s", collection.describe());
       }
@@ -45,7 +45,7 @@ public final class Membership implements Operation {
     });
   }
 
-  private Condition oneOf(Operand element, List<Operand> values, Operand list) {
+  private Condition oneOf(Call call, Operand element, List<Operand> values, Operand list) {
     if (!element.isField()) {
       throw element.refuse("expected a field before 'in' a list but found %s", element.describe());
     }
@@ -55,6 +55,6 @@ public final class Membership implements Operation {
     FieldPath field = element.path();
     List<Condition> equalities = values.stream()
         .<Condition> map(value -> new Restriction(field, Operator.EQUALS, value.value())).toList();
-    return equalities.size() == 1 ? equalities.getFirst() : new Or(equalities);
+    return equalities.size() == 1 ? equalities.getFirst() : new Or(equalities.stream().map(call::decorate).toList());
   }
 }

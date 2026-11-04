@@ -1,5 +1,6 @@
 package dev.horizon.aquery.cel.filter;
 
+import dev.horizon.aquery.aip160.Filter.Condition;
 import dev.horizon.aquery.aip160.InvalidFilterException;
 import java.util.List;
 import java.util.Optional;
@@ -35,5 +36,10 @@ record ParsedCall(Site site, Translation translation) implements Call {
   @Override
   public InvalidFilterException refuse(String message, Object... arguments) {
     return site.refuse(message, arguments);
+  }
+
+  @Override
+  public Condition decorate(Condition condition) {
+    return translation.decorate(condition);
   }
 }

@@ -4,13 +4,17 @@ import dev.horizon.aquery.cel.Type;
 
 import dev.horizon.aquery.shaded.cel.common.ast.CelConstant;
 import dev.horizon.aquery.shaded.cel.common.ast.CelExpr;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 final class CheckedCall implements Call {
 
   private final Site site;
   private final Translation translation;
+  private final Map<Integer, Expression> arguments = new HashMap<>();
 
   CheckedCall(Site site, Translation translation) {
     this.site = site;
@@ -29,12 +33,12 @@ final class CheckedCall implements Call {
 
   @Override
   public Expression argument(int index) {
-    return translation.expression(node(index));
+    return arguments.computeIfAbsent(index, _ -> translation.expression(node(index)));
   }
 
   @Override
   public List<Expression> arguments() {
-    return site.node().call().args().stream().map(translation::expression).toList();
+    return IntStream.range(0, site.node().call().args().size()).mapToObj(this::argument).toList();
   }
 
   @Override
