@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/zZHorizonZz/aquery/compare/v0.3.0...v0.4.0) (2026-11-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* CelExpressionCompiler is removed in favour of CelGrammar.standard().compile(text, environment, type), and the types of the CEL module moved to sub-packages, e.g. CelFilterParser is now dev.horizon.aquery.cel.filter.CelFilterParser.
+
+### Features
+
+* compile CEL expressions into a typed tree ([ad34269](https://github.com/zZHorizonZz/aquery/commit/ad34269d27a9513b0c43cc575d6929876336aa53))
+* make the CEL grammars configurable and split them into packages ([#26](https://github.com/zZHorizonZz/aquery/issues/26)) ([677d2e3](https://github.com/zZHorizonZz/aquery/commit/677d2e3348536c23f0913e4f006671a4ebd08337))
+
 ## [0.3.0](https://github.com/zZHorizonZz/aquery/compare/v0.2.0...v0.3.0) (2026-10-09)
 
 
